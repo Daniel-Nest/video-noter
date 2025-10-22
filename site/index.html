@@ -993,6 +993,12 @@ const embed = {
 let ytApiReadyPromise = null;
 let vmApiReadyPromise = null;
 
+/* Utils */
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+/* YouTube API loader (official host) */
 function ensureYouTubeAPI() {
   if (window.YT && window.YT.Player) return Promise.resolve();
   if (ytApiReadyPromise) return ytApiReadyPromise;
@@ -1008,6 +1014,8 @@ function ensureYouTubeAPI() {
   });
   return ytApiReadyPromise;
 }
+
+/* Vimeo API loader */
 function ensureVimeoAPI() {
   if (window.Vimeo && window.Vimeo.Player) return Promise.resolve();
   if (vmApiReadyPromise) return vmApiReadyPromise;
@@ -1019,6 +1027,7 @@ function ensureVimeoAPI() {
   });
   return vmApiReadyPromise;
 }
+
 function destroyEmbedPlayers() {
   try { if (embed.yt && embed.yt.destroy) embed.yt.destroy(); } catch {}
   embed.yt = null;
@@ -1026,15 +1035,64 @@ function destroyEmbedPlayers() {
   embed.vm = null;
   embed.ready = false;
   embed.type = null;
+  const ytEl = document.getElementById('ytContainer');
+  if (ytEl && ytEl.parentNode) ytEl.parentNode.removeChild(ytEl);
 }
-async function initYouTubePlayer() {
+
+function ensureYtContainer() {
+  let el = document.getElementById('ytContainer');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'ytContainer';
+    el.style.position = 'absolute';
+    el.style.inset = '0';
+    els.embedWrap.appendChild(el);
+  }
+  return el;
+}
+
+function removeEmbedIframe() {
+  if (els.embedFrame && els.embedFrame.parentNode) {
+    els.embedFrame.parentNode.removeChild(els.embedFrame);
+  }
+}
+
+function ensureEmbedIframe() {
+  if (!els.embedFrame || !document.body.contains(els.embedFrame)) {
+    const iframe = document.createElement('iframe');
+    iframe.id = 'embedFrame';
+    iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+    iframe.setAttribute('allowfullscreen', '');
+    iframe.title = 'Embedded video';
+    if (iframe.hasAttribute('referrerpolicy')) iframe.removeAttribute('referrerpolicy');
+    els.embedWrap.appendChild(iframe);
+    els.embedFrame = iframe;
+  } else {
+    els.embedFrame.removeAttribute('referrerpolicy');
+  }
+  return els.embedFrame;
+}
+
+async function initYouTubePlayer(videoId) {
   await ensureYouTubeAPI();
-  embed.yt = new YT.Player(els.embedFrame, {
-    host: 'https://www.youtube-nocookie.com',
+  const container = ensureYtContainer();
+  removeEmbedIframe();
+  embed.yt = new YT.Player(container, {
+    host: 'https://www.youtube.com',
+    width: '100%',
+    height: '100%',
+    videoId,
+    playerVars: {
+      enablejsapi: 1,
+      playsinline: 1,
+      rel: 0,
+      modestbranding: 1,
+      origin: location.origin
+    },
     events: {
       onReady: () => {
         embed.ready = true;
-        const updateTitle = () => {
+        const tryTitle = () => {
           try {
             const data = embed.yt.getVideoData ? embed.yt.getVideoData() : null;
             const title = data && data.title ? String(data.title).trim() : '';
@@ -1042,22 +1100,28 @@ async function initYouTubePlayer() {
               const old = state.videoMeta?.name || '';
               if (title !== old) renameHistoryIfNeeded(old, title);
             } else {
-              setTimeout(updateTitle, 400);
+              setTimeout(tryTitle, 400);
             }
           } catch {
-            setTimeout(updateTitle, 400);
+            setTimeout(tryTitle, 400);
           }
         };
-        updateTitle();
+        tryTitle();
+        const ifr = container.querySelector('iframe');
+        if (ifr && ifr.hasAttribute('referrerpolicy')) {
+          try { ifr.removeAttribute('referrerpolicy'); } catch {}
+        }
       },
       onStateChange: () => {}
     }
   });
   embed.type = 'youtube';
 }
+
 async function initVimeoPlayer() {
   await ensureVimeoAPI();
-  embed.vm = new Vimeo.Player(els.embedFrame);
+  const iframe = ensureEmbedIframe();
+  embed.vm = new Vimeo.Player(iframe);
   embed.ready = true;
   embed.type = 'vimeo';
   try {
@@ -1070,10 +1134,21 @@ async function initVimeoPlayer() {
     }).catch(() => {});
   } catch {}
 }
+
 async function getCurrentTimeFromEmbed() {
   try {
-    if (embed.type === 'youtube' && embed.yt && embed.ready && typeof embed.yt.getCurrentTime === 'function') {
-      return embed.yt.getCurrentTime() || 0;
+    if (embed.type === 'youtube' && embed.yt) {
+      for (let i = 0; i < 5; i++) {
+        let t = 0;
+        try {
+          if (embed.ready && typeof embed.yt.getCurrentTime === 'function') {
+            t = embed.yt.getCurrentTime() || 0;
+          }
+        } catch {}
+        if (t > 0) return t;
+        await sleep(120);
+      }
+      return 0;
     }
     if (embed.type === 'vimeo' && embed.vm && embed.ready && typeof embed.vm.getCurrentTime === 'function') {
       const t = await embed.vm.getCurrentTime();
@@ -1362,7 +1437,7 @@ function resetVideo(clearMeta = true) {
   destroyEmbedPlayers();
   els.video.removeAttribute('src');
   els.video.load();
-  els.embedFrame.src = '';
+  if (els.embedFrame) els.embedFrame.src = '';
   els.embedWrap.hidden = true;
   els.video.hidden = false;
   els.playerWrap.classList.remove('link-mode');
@@ -1461,7 +1536,7 @@ function parseVideoLink(u) {
         if (location.origin && /^https?:/.test(location.protocol)) {
           params.set('origin', location.origin);
         }
-        const embedUrl = `https://www.youtube-nocookie.com/embed/${id}?${params.toString()}`;
+        const embedUrl = `https://www.youtube.com/embed/${id}?${params.toString()}`;
         return { type: 'youtube', id, embedUrl };
       }
     }
@@ -1540,13 +1615,14 @@ async function handleLink(u) {
     state.videoMeta = { name: metaName, size: 0, lastModified: Date.now(), url: u, provider: parsed.type };
     setVideoMeta(state.videoMeta);
     destroyEmbedPlayers();
-    els.embedFrame.src = parsed.embedUrl;
     els.embedWrap.hidden = false;
     els.video.hidden = true;
     els.playerWrap.classList.add('link-mode');
     if (parsed.type === 'youtube') {
-      await initYouTubePlayer();
+      await initYouTubePlayer(parsed.id);
     } else {
+      const iframe = ensureEmbedIframe();
+      iframe.src = parsed.embedUrl;
       await initVimeoPlayer();
     }
   } else {
