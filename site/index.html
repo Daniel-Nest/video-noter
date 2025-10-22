@@ -993,6 +993,29 @@ const embed = {
 let ytApiReadyPromise = null;
 let vmApiReadyPromise = null;
 
+/* Embed time ticker/cache to survive webview quirks */
+let embedTimeCache = 0;
+let embedTicker = null;
+function startEmbedTicker() {
+  stopEmbedTicker();
+  embedTicker = setInterval(async () => {
+    try {
+      if (embed.type === 'youtube' && embed.yt && typeof embed.yt.getCurrentTime === 'function') {
+        const t = Number(embed.yt.getCurrentTime() || 0);
+        if (t >= 0) embedTimeCache = t;
+      } else if (embed.type === 'vimeo' && embed.vm && typeof embed.vm.getCurrentTime === 'function') {
+        const t = await embed.vm.getCurrentTime();
+        if (Number.isFinite(t) && t >= 0) embedTimeCache = t;
+      }
+    } catch {}
+  }, 300);
+}
+function stopEmbedTicker() {
+  if (embedTicker) clearInterval(embedTicker);
+  embedTicker = null;
+  embedTimeCache = 0;
+}
+
 /* Utils */
 function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
@@ -1035,6 +1058,7 @@ function destroyEmbedPlayers() {
   embed.vm = null;
   embed.ready = false;
   embed.type = null;
+  stopEmbedTicker();
   const ytEl = document.getElementById('ytContainer');
   if (ytEl && ytEl.parentNode) ytEl.parentNode.removeChild(ytEl);
 }
@@ -1077,6 +1101,8 @@ async function initYouTubePlayer(videoId) {
   await ensureYouTubeAPI();
   const container = ensureYtContainer();
   removeEmbedIframe();
+  embed.ready = false;
+  embed.type = 'youtube';
   embed.yt = new YT.Player(container, {
     host: 'https://www.youtube.com',
     width: '100%',
@@ -1087,11 +1113,12 @@ async function initYouTubePlayer(videoId) {
       playsinline: 1,
       rel: 0,
       modestbranding: 1,
-      origin: location.origin
+      origin: /^https?:/.test(location.protocol) ? location.origin : undefined
     },
     events: {
       onReady: () => {
         embed.ready = true;
+        startEmbedTicker();
         const tryTitle = () => {
           try {
             const data = embed.yt.getVideoData ? embed.yt.getVideoData() : null;
@@ -1115,7 +1142,6 @@ async function initYouTubePlayer(videoId) {
       onStateChange: () => {}
     }
   });
-  embed.type = 'youtube';
 }
 
 async function initVimeoPlayer() {
@@ -1124,6 +1150,7 @@ async function initVimeoPlayer() {
   embed.vm = new Vimeo.Player(iframe);
   embed.ready = true;
   embed.type = 'vimeo';
+  startEmbedTicker();
   try {
     embed.vm.getVideoTitle().then(title => {
       title = String(title || '').trim();
@@ -1135,24 +1162,39 @@ async function initVimeoPlayer() {
   } catch {}
 }
 
+/* Robust current time getter with retries + cache */
 async function getCurrentTimeFromEmbed() {
   try {
-    if (embed.type === 'youtube' && embed.yt) {
-      for (let i = 0; i < 5; i++) {
-        let t = 0;
+    if (embed.type === 'youtube') {
+      await ensureYouTubeAPI();
+      for (let i = 0; i < 12; i++) {
+        if (embedTimeCache > 0) return embedTimeCache;
+        if (embed.yt && typeof embed.yt.getCurrentTime === 'function') {
+          let t = 0;
+          try { t = Number(embed.yt.getCurrentTime() || 0); } catch { t = 0; }
+          if (t > 0) return t;
+          try {
+            const ps = typeof embed.yt.getPlayerState === 'function' ? embed.yt.getPlayerState() : undefined;
+            if (ps === YT.PlayerState.PLAYING || ps === YT.PlayerState.PAUSED || ps === YT.PlayerState.BUFFERING) {
+              t = Number(embed.yt.getCurrentTime() || 0);
+              if (t > 0) return t;
+            }
+          } catch {}
+        }
+        await sleep(150);
+      }
+      return embedTimeCache || 0;
+    }
+    if (embed.type === 'vimeo' && embed.vm) {
+      for (let i = 0; i < 8; i++) {
+        if (embedTimeCache > 0) return embedTimeCache;
         try {
-          if (embed.ready && typeof embed.yt.getCurrentTime === 'function') {
-            t = embed.yt.getCurrentTime() || 0;
-          }
+          const t = await embed.vm.getCurrentTime();
+          if (Number.isFinite(t) && t >= 0) return t;
         } catch {}
-        if (t > 0) return t;
         await sleep(120);
       }
-      return 0;
-    }
-    if (embed.type === 'vimeo' && embed.vm && embed.ready && typeof embed.vm.getCurrentTime === 'function') {
-      const t = await embed.vm.getCurrentTime();
-      return t || 0;
+      return embedTimeCache || 0;
     }
   } catch {}
   return 0;
@@ -1528,16 +1570,7 @@ function parseVideoLink(u) {
         if (!id && url.pathname.startsWith('/shorts/')) id = url.pathname.split('/')[2] || '';
       }
       if (id) {
-        const params = new URLSearchParams();
-        params.set('rel', '0');
-        params.set('modestbranding', '1');
-        params.set('playsinline', '1');
-        params.set('enablejsapi', '1');
-        if (location.origin && /^https?:/.test(location.protocol)) {
-          params.set('origin', location.origin);
-        }
-        const embedUrl = `https://www.youtube.com/embed/${id}?${params.toString()}`;
-        return { type: 'youtube', id, embedUrl };
+        return { type: 'youtube', id };
       }
     }
     if (host.includes('vimeo.com')) {
