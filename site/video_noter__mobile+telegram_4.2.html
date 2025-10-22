@@ -1,0 +1,1903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Video Noter — Telegram Mini App Style</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <style>
+:root {
+  --brand: #2aabee;
+  --bg: #ffffff;
+  --fg: #0f172a;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --card: #ffffff;
+  --danger: #dc2626;
+  --ring: rgba(42, 171, 238, 0.35);
+  --shadow: 0 10px 20px rgba(2, 6, 23, 0.08), 0 2px 6px rgba(2, 6, 23, 0.06);
+  --logo-bg: #d9f2ff;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  color: var(--fg);
+  background: var(--bg);
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: env(safe-area-inset-bottom);
+  width: 100%;
+}
+
+[hidden] { display: none !important; }
+
+.sr-only {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0);
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: -9999px;
+}
+.skip-link:focus {
+  left: 12px;
+  top: 12px;
+  background: var(--brand);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 10px;
+  z-index: 1000;
+}
+
+/* App Bar (Telegram Mini Apps style) */
+.tg-appbar {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  background: rgba(255,255,255,0.8);
+  backdrop-filter: saturate(180%) blur(10px);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 100%;
+}
+.tg-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.appbar-actions { display: inline-flex; align-items: center; gap: 8px; }
+.tg-nav-space { width: 0; height: 40px; }
+.logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 9999px;
+  background: var(--logo-bg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+.logo svg { width: 20px; height: 20px; display: block; }
+.app-title {
+  font-size: clamp(18px, 2vw, 22px);
+  margin: 0;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Layout */
+.tg-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+  padding: 16px;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+}
+@media (min-width: 960px) {
+  .tg-layout {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    gap: 40px;
+    padding: 20px;
+  }
+}
+.left, .right {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 100%;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Card + Meta */
+.tg-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  max-width: 100%;
+  width: 100%;
+}
+.video-meta {
+  margin: 10px 14px 12px 14px;
+  font-size: 13px;
+  color: var(--muted);
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Dropzone */
+.dropzone {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--border);
+  border-radius: 18px;
+  padding: 28px;
+  background: #f8fafc;
+  min-height: 200px;
+  transition: border-color .2s, background .2s, transform .2s;
+  outline: none;
+  touch-action: manipulation;
+  max-width: 100%;
+  width: 100%;
+}
+.dropzone:focus-visible {
+  box-shadow: 0 0 0 4px var(--ring);
+  border-color: var(--brand);
+}
+.dropzone.dragover {
+  border-color: var(--brand);
+  background: #eef7ff;
+  transform: translateY(-1px);
+}
+.dropzone input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+.dz-inner { text-align: center; }
+.dz-icon { font-size: 36px; margin-bottom: 8px; }
+.dz-text { color: var(--muted); font-size: 14px; }
+
+/* Player */
+.player-wrap video {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: #000;
+  cursor: pointer;
+}
+
+/* Timebar */
+.timebar {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  font-variant-numeric: tabular-nums;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Seek */
+.seek {
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  background: linear-gradient(var(--logo-bg), var(--logo-bg)) center/100% 6px no-repeat;
+  height: 36px;
+}
+.seek:focus { outline: none; }
+.seek::-webkit-slider-runnable-track {
+  -webkit-appearance: none;
+  height: 6px;
+  background-color: var(--logo-bg);
+  border-radius: 999px;
+  border: none;
+}
+.seek::-moz-range-track {
+  height: 6px;
+  background: var(--logo-bg);
+  border-radius: 999px;
+  border: none;
+}
+.seek::-ms-track {
+  height: 6px;
+  background: transparent;
+  border-color: transparent;
+  color: transparent;
+}
+.seek::-ms-fill-lower,
+.seek::-ms-fill-upper {
+  background: var(--logo-bg);
+  border-radius: 999px;
+  border: none;
+}
+.seek::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--brand);
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(2,6,23,0.2);
+  margin-top: -10px;
+}
+.seek::-moz-range-thumb {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--brand);
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(2,6,23,0.2);
+}
+.seek::-ms-thumb {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--brand);
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(2,6,23,0.2);
+}
+
+/* Controls */
+.controlbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  background: #fff;
+}
+
+/* Buttons (text) */
+.btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--fg);
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  min-height: 44px;
+  min-width: 44px;
+  cursor: pointer;
+  transition: transform .06s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease, color .2s ease;
+  touch-action: manipulation;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+.btn:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--ring); border-color: var(--brand); }
+.btn.small { padding: 6px 10px; min-height: 34px; font-size: 13px; border-radius: 10px; }
+.btn.tg-primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+.btn.tg-primary:hover { filter: brightness(0.98); }
+.btn.tg-secondary { background: #f8fafc; color: var(--fg); }
+.btn.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+
+/* Icon buttons */
+.iconbtn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--fg);
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  min-height: 48px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform .06s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease, color .2s ease;
+}
+.iconbtn.play { width: 56px; height: 56px; min-width: 56px; min-height: 56px; }
+.iconbtn.sm { width: 40px; height: 40px; min-width: 40px; min-height: 40px; }
+.iconbtn.xl { width: 48px; height: 48px; }
+.iconbtn:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+.iconbtn:active { transform: translateY(0); }
+.iconbtn:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--ring); border-color: var(--brand); }
+.iconbtn.active { color: var(--brand); }
+
+/* Make all SVG strokes follow currentColor (exclude logo) */
+.btn svg, .iconbtn svg, .timestamp svg { width: 22px; height: 22px; display: block; }
+.iconbtn.play svg { width: 28px; height: 28px; }
+.btn svg, .btn svg *, .iconbtn svg, .iconbtn svg *, .timestamp svg, .timestamp svg * {
+  stroke: currentColor;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Hide transparent bounding squares globally */
+svg rect[width="24"][height="24"],
+svg path[d="M0,0h24v24h-24Z"],
+svg path[d="M0 0h24v24h-24Z"],
+svg path[d="M0,0h24v24h-24v-24Z"],
+svg path[d="M0 0h24v24h-24v-24Z"],
+svg path[d="M0,0H24V24H0Z"],
+svg path[d="M0 0H24V24H0Z"],
+svg path[d="M24,0V24H0V0Z"],
+svg path[d="M0,0h24v24H0Z"],
+svg path[d="M0 0h24v24H0Z"] {
+  stroke: none !important;
+  fill: none !important;
+}
+
+/* Segments */
+.segments-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+.tg-section-title { margin: 0; font-size: 16px; }
+.badge {
+  display: inline-block;
+  background: #e6f3ff;
+  color: #115e94;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid #cfe8ff;
+  margin-left: 6px;
+}
+
+.segments {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  max-height: calc(100vh - 260px);
+  overflow-y: auto;
+  padding-bottom: 90px;
+  max-width: 100%;
+  width: 100%;
+}
+
+.empty { color: var(--muted); font-size: 14px; }
+
+.segment {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .2s ease, background .2s ease;
+  max-width: 100%;
+  width: 100%;
+}
+.segment.new { animation: pop .25s ease; }
+@keyframes pop { 0% { transform: scale(.98); } 100% { transform: scale(1); } }
+.segment.active { border-color: var(--brand); background: #eef7ff; }
+
+.segment-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  max-width: 100%;
+  width: 100%;
+  min-width: 0;
+}
+
+.timestamp {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #e6f3ff;
+  color: #115e94;
+  border: 1px solid #cfe8ff;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.seg-delete-top {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.segment-title {
+  flex: 1 1 100%;
+  color: var(--fg);
+  font-size: 14px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+
+.seg-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  max-width: 100%;
+  width: 100%;
+}
+
+/* Comment form */
+.comment-form {
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  border-bottom: 1px solid var(--border);
+  background: #fff;
+  width: 100%;
+}
+.field-wrap { display: grid; }
+#commentInput {
+  width: 100%;
+  resize: vertical;
+  min-height: 80px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  outline: none;
+  font-size: 15px;
+  transition: box-shadow .2s, border-color .2s;
+  max-width: 100%;
+}
+#commentInput:focus { border-color: var(--brand); box-shadow: 0 0 0 4px var(--ring); }
+.form-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+  align-items: stretch;
+}
+.form-actions .btn { width: 100%; justify-content: center; }
+.hint { margin: 0; font-size: 12px; color: var(--muted); }
+
+/* Edit form inside segment */
+.seg-edit { display: grid; gap: 10px; }
+.seg-row { display: flex; align-items: flex-start; gap: 8px; flex-wrap: nowrap; }
+.seg-row .seg-icon { align-self: flex-start; display: flex; }
+.seg-row .seg-icon svg { width: 20px; height: 20px; }
+.seg-row.note .seg-text { flex: 1; }
+.seg-row.time { align-items: center; }
+.seg-row.time .seg-icon { align-self: center; }
+.seg-row.time .seg-input { flex: 1; min-width: 0; }
+.seg-row.time .dash { user-select: none; font-weight: 700; color: var(--muted); }
+.seg-input, .seg-text {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  font-size: 15px;
+  outline: none;
+  max-width: 100%;
+}
+.seg-text {
+  min-height: 80px;
+  resize: vertical;
+}
+.seg-input:focus, .seg-text:focus { border-color: var(--brand); box-shadow: 0 0 0 4px var(--ring); }
+
+/* Bottom sticky bar */
+.tg-bottom {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  border-top: 1px solid var(--border);
+  background: rgba(255,255,255,0.9);
+  backdrop-filter: blur(8px);
+  z-index: 10;
+  width: 100%;
+  max-width: 100%;
+}
+.sticky-inner {
+  max_width: 1200px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  width: 100%;
+  flex-wrap: wrap;
+}
+@media (max-width: 640px) {
+  .sticky-inner {
+    display: grid;
+    grid-template-columns: 1fr 1fr 48px;
+    gap: 10px;
+    justify-content: stretch;
+  }
+  .sticky-inner .btn { width: 100%; }
+  .hint { display: none; }
+}
+
+/* History Panel */
+.history-panel {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+}
+.history-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  padding-bottom: 100px;
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+}
+.history-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  width: 100%;
+}
+.history-card {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: border-color .2s, background .2s, transform .18s ease;
+}
+.history-card.open { border-color: var(--brand); background: #eef7ff; }
+.history-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+.history-card.open .history-row { padding: 12px 14px; }
+.history-info { min-width: 0; }
+.history-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.history-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+.history-count {
+  display: inline-block;
+  background: #e6f3ff;
+  color: #115e94;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid #cfe8ff;
+}
+.history-actions { display: inline-flex; align-items: center; gap: 8px; }
+.history-notes {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  background: #fff;
+  border-top: 1px solid var(--border);
+}
+.history-meta-detail {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--fg);
+}
+.history-note {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  background: #fff;
+  font-size: 14px;
+}
+.history-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+.history-bottom {
+  position: sticky;
+  bottom: 0;
+  border-top: 1px solid var(--border);
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(8px);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.history-bottom-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: center;
+}
+
+/* Mobile compact look for collapsed cards */
+@media (max-width: 640px) {
+  .history-title { font-size: 13px; }
+  .history-row { padding: 8px 10px; }
+}
+  </style>
+  <style>
+    body {
+      padding: 8px;
+    }
+  </style>
+</head>
+<body>
+<a class="skip-link" href="#segments">Skip to segments</a>
+
+<header class="tg-appbar" role="banner">
+<div class="tg-nav-space" aria-hidden="true"></div>
+<div class="tg-title">
+<span class="logo" aria-hidden="true">
+<svg id="Layer_3" data-name="Layer 3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+<path d="M18,8.97h4" fill="none" stroke="#2aabee" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+<path d="M18,15h4" fill="none" stroke="#2aabee" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+<path d="M12,14v2" fill="none" stroke="#2aabee" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+<path d="M12,8.36v2" fill="none" stroke="#2aabee" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+<path d="M6,15.03H2" fill="none" stroke="#2aabee" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+<path d="M6,9H2" fill="none" stroke="#2aabee" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+<path d="M8,20H4.25A2.24954,2.24954,0,0,1,2,17.75V6.25A2.24954,2.24954,0,0,1,4.25,4H8" fill="none" stroke="#2aabee" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+<path d="M16,4h3.75A2.24954,2.24954,0,0,1,22,6.25v11.5A2.24954,2.24954,0,0,1,19.75,20H16" fill="none" stroke="#2aabee" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+<path d="M18,4V20" fill="none" stroke="#2aabee" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+<path d="M6.12,4V20" fill="none" stroke="#2aabee" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+<path d="M13.49782,22H10.50218a.49638.49638,0,0,1-.43158-.74909l1.49782-2.50721a.504.504,0,0,1,.86316,0l1.49782,2.50721A.49638.49638,0,0,1,13.49782,22Z" fill="none" stroke="#2aabee" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+<path d="M10.50218,2h2.99564a.49638.49638,0,0,1,.43158.74909L12.43158,5.2563a.504.504,0,0,1-.86316,0L10.0706,2.74909A.496.496,0,0,1,10.50218,2Z" fill="none" stroke="#2aabee" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+<path d="M0,0H24V24H0Z" fill="none"/>
+</svg>
+</span>
+<h1 class="app-title">Video Noter</h1>
+</div>
+<div class="appbar-actions">
+<button id="historyBtn" class="btn small tg-secondary" aria-label="History">
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g fill="none"><path d="M0,0h24v24h-24Z"></path><path stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12,3a9,9,0,1,0,9,9"></path><path stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12,7v5l3,2"></path></g></svg>
+<span>History</span>
+</button>
+</div>
+</header>
+
+<main class="tg-layout" role="main">
+<section class="left">
+<div class="tg-card">
+<div id="dropZone" class="dropzone" tabindex="0" role="button" aria-label="Select or drop an MP4 video">
+<input id="fileInput" type="file" accept="video/mp4" aria-label="Choose MP4 file">
+<div class="dz-inner">
+<div class="dz-icon" aria-hidden="true">📹</div>
+<div class="dz-text">
+<strong>Choose video</strong> or drag & drop MP4
+</div>
+</div>
+</div>
+
+<div id="playerWrap" class="player-wrap" hidden>
+<video id="video" playsinline preload="metadata" aria-label="Video player"></video>
+
+<div class="timebar" aria-live="polite">
+<span id="currentTime" aria-label="Current time">00:00</span>
+<input id="seekBar" class="seek" type="range" min="0" max="0" value="0" step="0.01" aria-label="Seek timeline">
+<span id="duration" aria-label="Duration">00:00</span>
+</div>
+
+<div class="controlbar" role="group" aria-label="Player controls">
+<button id="ctrlBack" class="iconbtn" aria-label="Back 5 seconds">
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g transform="rotate(180 12 12)" stroke-linecap="round" stroke-width="1.5" stroke="#323232" fill="none" stroke-linejoin="round"><path d="M13.5,16l4,-4l-4,-4"></path><path d="M6.5,17l5,-5l-5,-5"></path></g><path fill="none" d="M0,0h24v24h-24Z"></path></svg>
+</button>
+<button id="ctrlPlay" class="iconbtn play" aria-label="Play">
+<svg id="iconPlay" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g fill="none"><path d="M0,0h24v24h-24Z"></path><path stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21,12v0c0,4.971 -4.029,9 -9,9v0c-4.971,0 -9,-4.029 -9,-9v0c0,-4.971 4.029,-9 9,-9v0c4.971,0 9,4.029 9,9Z"></path><path stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.941,9.058l3.882,2.296c0.491,0.29 0.491,1.001 0,1.291l-3.882,2.296c-0.5,0.296 -1.132,-0.065 -1.132,-0.646v-4.591c-1.77636e-15,-0.581 0.632,-0.942 1.132,-0.646Z"></path></g></svg>
+<svg id="iconPause" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" hidden><g fill="none"><path d="M0,0h24v24h-24Z"></path><path stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14,15v-6"></path><path stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10,15v-6"></path><path stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21,12v0c0,4.971 -4.029,9 -9,9v0c-4.971,0 -9,-4.029 -9,-9v0c0,-4.971 4.029,-9 9,-9v0c4.971,0 9,4.029 9,9Z"></path></g></svg>
+</button>
+<button id="ctrlFwd" class="iconbtn" aria-label="Forward 5 seconds">
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g stroke-linecap="round" stroke-width="1.5" stroke="#323232" fill="none" stroke-linejoin="round"><path d="M13.5,16l4,-4l-4,-4"></path><path d="M6.5,17l5,-5l-5,-5"></path></g><path fill="none" d="M0,0h24v24h-24Z"></path></svg>
+</button>
+<button id="ctrlMute" class="iconbtn" aria-label="Mute">
+<svg id="iconMuteSvg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g fill="none"><path d="M0,0h24v24H0Z"></path><path stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5.875,8.625l3.979,-3.371c0.65,-0.551 1.646,-0.089 1.646,0.763v11.965c0,0.852 -0.997,1.314 -1.646,0.763l-3.979,-3.371"></path><path stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5.875,15.375h-2.375c-0.552,0 -1,-0.448 -1,-1v-4.75c0,-0.552 0.448,-1 1,-1h2.375"></path><path stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20.58,9.69l-4.5,4.5"></path><path stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20.58,14.19l-4.5,-4.5"></path></g></svg>
+</button>
+</div>
+
+<form id="commentForm" class="comment-form" autocomplete="off" onsubmit="event.preventDefault()" onsubmit="event.preventDefault()" onsubmit="event.preventDefault()" onsubmit="event.preventDefault()">
+<label for="commentInput" class="sr-only">Comment</label>
+<div class="field-wrap">
+<textarea id="commentInput" rows="3" placeholder="Add note for current time..." aria-label="Comment input"></textarea>
+</div>
+<div class="form-actions">
+<button id="clearBtn" type="button" class="btn tg-secondary" aria-label="Clear">
+<svg version="1.1" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<g fill="none">
+<path d="M0 0h24v24h-24v-24Z"></path>
+<path stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.954 21h-13.908c-1.105 0-2-.895-2-2v-8c0-1.105.895-2 2-2h13.908c1.105 0 2 .895 2 2v8c0 1.105-.896 2-2 2Z"></path>
+<path stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.782 9v-1c0-1.105.895-2 2-2h10.435c1.105 0 2 .895 2 2v1"></path>
+<path stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6.516 6v-1c0-1.105.895-2 2-2h6.969c1.105 0 2 .895 2 2v1"></path>
+<path stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.121 12.879l-4.243 4.243"></path>
+<path stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.121 16.98l-4.101-4.101"></path>
+</g>
+</svg>
+<span>Clear</span>
+</button>
+<button id="replaceBtn" type="button" class="btn tg-secondary" aria-label="Replace">
+<svg version="1.1" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke-linecap="round" stroke-width="1.5" stroke="#323232" fill="none" stroke-linejoin="round"><path d="M5,14v8"></path><path d="M10,14v8"></path><path d="M2,18h3"></path><path d="M10,18h3"></path><path fill-rule="evenodd" d="M11.723,22h-8.446c-0.705,0 -1.277,-0.572 -1.277,-1.277v-5.447c0,-0.704 0.572,-1.276 1.277,-1.276h8.447c0.704,0 1.276,0.572 1.276,1.277v5.447c0,0.704 -0.572,1.276 -1.277,1.276Z"></path><path d="M14,2v8"></path><path d="M19,2v8"></path><path d="M11,6h3"></path><path d="M19,6h3"></path><path fill-rule="evenodd" d="M20.723,10h-8.447c-0.704,0 -1.276,-0.572 -1.276,-1.277v-5.446c0,-0.705 0.572,-1.277 1.277,-1.277h8.447c0.704,0 1.276,0.572 1.276,1.277v5.447c0,0.704 -0.572,1.276 -1.277,1.276Z"></path><path d="M5,7l2,-2l-2,-2"></path><path d="M2,10v-3c0,-1.105 0.895,-2 2,-2h3"></path><path d="M19,17l-2,2l2,2"></path><path d="M22,14v3c0,1.105 -0.895,2 -2,2h-3"></path></g><path fill="none" d="M0,0h24v24h-24Z"></path></svg>
+<span>Replace</span>
+</button>
+<button id="addBtn" type="submit" class="btn tg-primary" aria-label="Add">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M24,0V24H0V0Z" fill="none"/><path d="M15,3.52307a8.86459,8.86459,0,0,0-6,0" fill="none" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/><path d="M3.15656,10.35833A8.981,8.981,0,0,1,6.1571,5.16247" fill="none" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/><path d="M6.1571,18.83752A8.98153,8.98153,0,0,1,3.15656,13.6416" fill="none" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/><path d="M9,20.47692a8.86443,8.86443,0,0,0,6,0" fill="none" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/><path d="M20.84344,10.35833A8.981,8.981,0,0,0,17.8429,5.16247" fill="none" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/><path d="M17.8429,18.83752a8.98153,8.98153,0,0,0,3.00054-5.19592" fill="none" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/><line x1="10" y1="12" x2="14" y2="12" fill="none" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/><line x1="12" y1="14" x2="12" y2="10" fill="none" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/></svg>
+<span>Add</span>
+</button>
+</div>
+<p class="hint">Press ⌘⏎ or Ctrl⏎ to add instantly</p>
+</form>
+</div>
+
+<div class="video-meta" id="videoMeta" aria-live="polite"></div>
+</section>
+
+<section class="right">
+<div class="segments-header">
+<h2 id="segmentsLabel" class="tg-section-title">Segments <span id="countBadge" class="badge">0</span></h2>
+</div>
+
+<div id="segments" class="segments" role="list" aria-describedby="segmentsHelp"></div>
+<p id="segmentsHelp" class="empty" hidden>No segments yet. Add your first comment while the video is at the right moment.</p>
+</section>
+</main>
+
+<footer class="tg-bottom" role="contentinfo">
+<div class="sticky-inner">
+<button id="exportBtn" class="btn tg-secondary" disabled aria-label="Export">
+<svg version="1.1" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<g stroke-linecap="round" stroke-width="1.5" stroke="#323232" fill="none" stroke-linejoin="round">
+<path d="M18.414,6.414l-2.828,-2.828c-0.375,-0.375 -0.884,-0.586 -1.414,-0.586h-7.172c-1.105,0 -2,0.895 -2,2v14c0,1.105 0.895,2 2,2h10c1.105,0 2,-0.895 2,-2v-11.172c0,-0.53 -0.211,-1.039 -0.586,-1.414Z"></path>
+<path d="M19,8h-4c-0.552,0 -1,-0.448 -1,-1v-4"></path>
+<path d="M10.5,18h3"></path>
+<path d="M12,12v6"></path>
+<path d="M9,13.5v-1c0,-0.276 0.224,-0.5 0.5,-0.5h5c0.276,0 0.5,0.224 0.5,0.5v1"></path>
+</g>
+<path fill="none" d="M0,0h24v24h-24Z"></path>
+</svg>
+<span>Export</span>
+</button>
+<button id="copyBtn" class="btn tg-primary" disabled aria-label="Copy">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+<g id="Layer_2" data-name="Layer 2">
+<path d="M0,0H24V24H0Z" fill="none"/>
+<path d="M21,5h0a1.99945,1.99945,0,0,0-2-2h0" fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+<path d="M21,12v1" fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+<path d="M21,8V9" fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+<path d="M21,16h0a1.99945,1.99945,0,0,1-2,2h0" fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+<path d="M8,3H8A1.99945,1.99945,0,0,0,6,5H6" fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+<path d="M15,3h1" fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+<path d="M11,3h1" fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+<path d="M14,21H5a1.99945,1.99945,0,0,1-2-2V10A1.99945,1.99945,0,0,1,5,8h9a1.99945,1.99945,0,0,1,2,2v9A1.99945,1.99945,0,0,1,14,21Z" fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+<path d="M6,11.5h7" fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+<path d="M6,17.5H9" fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+<path d="M6,14.5h7" fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+</g>
+</svg>
+<span>Copy</span>
+</button>
+<button id="shareBtn" class="iconbtn xl tg-secondary" disabled aria-label="Share">
+<svg version="1.1" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g stroke-linecap="round" stroke-width="1.5" stroke="#323232" fill="none" stroke-linejoin="round">
+<path d="M15 9h2l-8.74228e-08 1.77636e-15c1.10457-4.82823e-08 2 .89543 2 2v8 0c0 1.10457-.895431 2-2 2h-10l-8.74228e-08-3.55271e-15c-1.10457-4.82823e-08-2-.895431-2-2 0 0 0 0 0 0v-8l2.30926e-14 3.01992e-07c-1.66785e-07-1.10457.89543-2 2-2h2"></path>
+<line x1="12" x2="12" y1="15" y2="3"></line>
+<polyline points="15,6 12,3 9,6"></polyline>
+</g>
+<path fill="none" d="M0 0h24v24h-24Z"></path>
+</svg>
+</button>
+</div>
+</footer>
+
+<aside id="historyPanel" class="history-panel" hidden>
+<header class="tg-appbar" role="banner">
+<button id="historyBack" class="iconbtn sm tg-nav" aria-label="Back">
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g stroke-linecap="round" stroke-width="1.5" stroke="#323232" fill="none" stroke-linejoin="round"><path d="M15,6l-6,6l6,6"></path></g><path fill="none" d="M0 0h24v24h-24Z"/></svg>
+</button>
+<div class="tg-title">
+<h2 class="app-title">History</h2>
+</div>
+<div class="tg-nav-space" aria-hidden="true"></div>
+</header>
+
+<section class="history-content" role="region" aria-label="History list">
+<div class="history-list" id="historyList" role="list"></div>
+<p id="historyEmpty" class="empty" hidden>No history yet.</p>
+</section>
+
+<footer class="history-bottom">
+<div class="history-bottom-inner">
+<button id="historyClearAll" class="btn tg-secondary" aria-label="Clear history">
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="#323232" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15.93749,6.5V4.125A1.125,1.125,0,0,0,14.81249,3h-5.625a1.125,1.125,0,0,0-1.125,1.125V6.5"/><path d="M18.74036,6.5l-.95557,12.42255A2.25,2.25,0,0,1,15.54144,21H8.45856a2.25,2.25,0,0,1-2.24335-2.07745L5.25964,6.5"/><line x1="20" y1="6.5" x2="4" y2="6.5"/><line x1="9.99999" y1="14.99997" x2="13.99999" y2="14.99997"/><line x1="9.99999" y1="11.99997" x2="13.99999" y2="11.99997"/></g></svg>
+<span>Clear history</span>
+</button>
+</div>
+</footer>
+</aside>
+
+<div id="live" class="sr-only" aria-live="polite"></div>
+  <script type="module">
+const LS_PREFIX = 's5fdb:';
+const LS_HISTORY_INDEX = `${LS_PREFIX}history:index`;
+function historyItemKey(name) {
+  return `${LS_PREFIX}history:item:${encodeURIComponent(name || '')}`;
+}
+const els = {
+  dropZone: document.getElementById('dropZone'),
+  fileInput: document.getElementById('fileInput'),
+  playerWrap: document.getElementById('playerWrap'),
+  video: document.getElementById('video'),
+  currentTime: document.getElementById('currentTime'),
+  duration: document.getElementById('duration'),
+  seekBar: document.getElementById('seekBar'),
+  commentForm: document.getElementById('commentForm'),
+  commentInput: document.getElementById('commentInput'),
+  addBtn: document.getElementById('addBtn'),
+  replaceBtn: document.getElementById('replaceBtn'),
+  segments: document.getElementById('segments'),
+  segmentsHelp: document.getElementById('segmentsHelp'),
+  countBadge: document.getElementById('countBadge'),
+  exportBtn: document.getElementById('exportBtn'),
+  copyBtn: document.getElementById('copyBtn'),
+  clearBtn: document.getElementById('clearBtn'),
+  videoMeta: document.getElementById('videoMeta'),
+  live: document.getElementById('live'),
+  ctrlPlay: document.getElementById('ctrlPlay'),
+  iconPlay: document.getElementById('iconPlay'),
+  iconPause: document.getElementById('iconPause'),
+  ctrlBack: document.getElementById('ctrlBack'),
+  ctrlFwd: document.getElementById('ctrlFwd'),
+  ctrlMute: document.getElementById('ctrlMute'),
+  iconMuteSvg: document.getElementById('iconMuteSvg'),
+  shareBtn: document.getElementById('shareBtn'),
+  historyBtn: document.getElementById('historyBtn'),
+  historyPanel: document.getElementById('historyPanel'),
+  historyBack: document.getElementById('historyBack'),
+  historyClearAll: document.getElementById('historyClearAll'),
+  historyList: document.getElementById('historyList'),
+  historyEmpty: document.getElementById('historyEmpty')
+};
+
+let state = {
+  videoId: null,
+  videoMeta: null,
+  objectUrl: null,
+  segments: [],
+  sortMode: 'time',
+  editingId: null
+};
+
+function fmtTime(sec) {
+  sec = Math.max(0, Math.floor(sec || 0));
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  const hh = String(h);
+  const mm = String(m).padStart(2, '0');
+  const ss = String(s).padStart(2, '0');
+  return h > 0 ? `${hh}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+function fmtHM(isoOrMs) {
+  try {
+    const d = new Date(isoOrMs);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '';
+  }
+}
+function bytesToMB(b) {
+  if (!Number.isFinite(b) || b <= 0) return '';
+  return `${(b / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function parseTime(input) {
+  if (input == null) return null;
+  const str = String(input).trim();
+  if (!str) return null;
+  if (/^\d+(\.\d+)?$/.test(str)) return Math.max(0, parseFloat(str));
+  const parts = str.split(':').map(Number);
+  if (parts.some(isNaN)) return null;
+  if (parts.length === 2) {
+    const [m, s] = parts;
+    return Math.max(0, m * 60 + s);
+  }
+  if (parts.length === 3) {
+    const [h, m, s] = parts;
+    return Math.max(0, h * 3600 + m * 60 + s);
+  }
+  return null;
+}
+
+function announce(msg) {
+  els.live.textContent = '';
+  requestAnimationFrame(() => {
+    els.live.textContent = msg;
+  });
+}
+
+function setVideoMeta(meta) {
+  const sizeMB = meta.size ? (meta.size / (1024 * 1024)).toFixed(1) : '';
+  els.videoMeta.textContent = sizeMB ? `${meta.name} • ${sizeMB} MB` : meta.name;
+}
+
+function storageKey(id) {
+  return `${LS_PREFIX}segments:${id}`;
+}
+
+function migrateSegment(old) {
+  const text = (old.text ?? old.note ?? '').trim();
+  const start = typeof old.start === 'number'
+    ? old.start
+    : (typeof old.time === 'number' ? old.time : 0);
+  const end = typeof old.end === 'number' ? old.end : null;
+  return { id: old.id ?? Date.now(), start, end, text };
+}
+
+function loadSegments(id) {
+  const raw = localStorage.getItem(storageKey(id));
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw) || [];
+    return arr.map(migrateSegment);
+  } catch {
+    return [];
+  }
+}
+
+function saveSegments() {
+  if (!state.videoId) return;
+  localStorage.setItem(storageKey(state.videoId), JSON.stringify(state.segments));
+  els.countBadge.textContent = String(state.segments.length);
+  const disabled = state.segments.length === 0;
+  els.exportBtn.disabled = disabled;
+  els.copyBtn.disabled = disabled;
+  els.shareBtn.disabled = disabled;
+  upsertHistoryFromState();
+}
+
+function sortSegments() {
+  if (state.sortMode === 'time') {
+    state.segments.sort((a, b) => a.start - b.start || a.id - b.id);
+  }
+}
+
+function timeLabel(seg) {
+  const a = fmtTime(seg.start);
+  if (typeof seg.end === 'number' && seg.end > seg.start) {
+    return `${a}–${fmtTime(seg.end)}`;
+  }
+  return a;
+}
+
+function renderSegments() {
+  sortSegments();
+  els.segments.innerHTML = '';
+  if (state.segments.length === 0) {
+    els.segmentsHelp.hidden = false;
+    saveSegments();
+    return;
+  }
+  els.segmentsHelp.hidden = true;
+  const frag = document.createDocumentFragment();
+
+  state.segments.forEach(seg => {
+    const item = document.createElement('article');
+    item.className = 'segment';
+    item.setAttribute('role', 'listitem');
+    item.dataset.id = seg.id;
+
+    const head = document.createElement('div');
+    head.className = 'segment-head';
+
+    const ts = document.createElement('button');
+    ts.className = 'timestamp';
+    ts.type = 'button';
+    ts.textContent = timeLabel(seg);
+    ts.setAttribute('aria-label', `Go to ${timeLabel(seg)}`);
+    ts.dataset.action = 'go';
+    head.appendChild(ts);
+
+    const delTop = document.createElement('button');
+    delTop.className = 'iconbtn sm seg-delete-top';
+    delTop.type = 'button';
+    delTop.setAttribute('aria-label', 'Delete segment');
+    delTop.dataset.action = 'delete';
+    delTop.innerHTML = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M15.93749,6.5V4.125A1.125,1.125,0,0,0,14.81249,3h-5.625a1.125,1.125,0,0,0-1.125,1.125V6.5"/><path d="M18.74036,6.5l-.95557,12.42255A2.25,2.25,0,0,1,15.54144,21H8.45856a2.25,2.25,0,0,1-2.24335-2.07745L5.25964,6.5"/><line x1="20" y1="6.5" x2="4" y2="6.5"/><line x1="9.99999" y1="14.99997" x2="13.99999" y2="14.99997"/><line x1="9.99999" y1="11.99997" x2="13.99999" y2="11.99997"/></svg>';
+    head.appendChild(delTop);
+
+    item.appendChild(head);
+
+    const title = document.createElement('div');
+    title.className = 'segment-title';
+    title.title = seg.text || '';
+    title.textContent = seg.text || 'Untitled note';
+    item.appendChild(title);
+
+    if (state.editingId === seg.id) {
+      item.classList.add('active');
+
+      const editWrap = document.createElement('div');
+      editWrap.className = 'seg-edit';
+
+      const noteRow = document.createElement('div');
+      noteRow.className = 'seg-row note';
+      const noteIcon = document.createElement('span');
+      noteIcon.className = 'seg-icon';
+      noteIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" fill="none"/><line x1="8" y1="9" x2="12" y2="9" fill="none" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/><line x1="8" y1="13" x2="16" y2="13" fill="none" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/><path d="M3,6A3,3,0,0,1,6,3H18a3,3,0,0,1,3,3V20.49921a.5.5,0,0,1-.765.424L17.1579,19H6a3,3,0,0,1-3-3Z" fill="none" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/></svg>';
+      noteRow.appendChild(noteIcon);
+
+      const textInput = document.createElement('textarea');
+      textInput.className = 'seg-text';
+      textInput.rows = 3;
+      textInput.placeholder = 'Edit note...';
+      textInput.value = seg.text || '';
+      textInput.dataset.role = 'edit-text';
+      noteRow.appendChild(textInput);
+      editWrap.appendChild(noteRow);
+
+      const timeRow = document.createElement('div');
+      timeRow.className = 'seg-row time';
+      const timeIcon = document.createElement('span');
+      timeIcon.className = 'seg-icon';
+      timeIcon.innerHTML = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g stroke-linecap="round" stroke-width="1.5" stroke="#323232" fill="none" stroke-linejoin="round"><path d="M10 2h4"></path><path d="M17.657 7.343c3.124 3.124 3.124 8.19 0 11.314 -3.124 3.124-8.19 3.124-11.314 0 -3.124-3.124-3.124-8.19 0-11.314 3.124-3.124 8.19-3.124 11.314 0"></path><path d="M12 5v-3"></path><path d="M12.006 11.5c-.834 0-1.506.672-1.506 1.5 0 .828.672 1.5 1.5 1.5 .828 0 1.5-.672 1.5-1.5 .006-.828-.666-1.5-1.494-1.5"></path><path d="M13.063 11.937l1.937-1.937"></path><path d="M19.66 5.34l-2 2"></path><path d="M18.66 4.34l2 2"></path><path d="M4.343 5.343l2 2"></path><path d="M3.343 6.343l2-2"></path></g><path fill="none" d="M0 0h24v24h-24v-24Z"></path></svg>';
+      timeRow.appendChild(timeIcon);
+
+      const startInput = document.createElement('input');
+      startInput.className = 'seg-input';
+      startInput.type = 'text';
+      startInput.placeholder = 'Start (mm:ss or h:mm:ss)';
+      startInput.value = fmtTime(seg.start);
+      startInput.dataset.role = 'edit-start';
+      timeRow.appendChild(startInput);
+
+      const setStartBtn = document.createElement('button');
+      setStartBtn.className = 'iconbtn sm';
+      setStartBtn.type = 'button';
+      setStartBtn.setAttribute('aria-label', 'Use current as Start');
+      setStartBtn.dataset.action = 'use-current-start';
+      setStartBtn.innerHTML = '<svg id="Layer_3" data-name="Layer 3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18,8.97h4"/><path d="M18,15h4"/><path d="M12,14v2"/><path d="M12,8.36v2"/><path d="M6,15.03H2"/><path d="M6,9H2"/><path d="M8,20H4.25A2.24954,2.24954,0,0,1,2,17.75V6.25A2.24954,2.24954,0,0,1,4.25,4H8"/><path d="M16,4h3.75A2.24954,2.24954,0,0,1,22,6.25v11.5A2.24954,2.24954,0,0,1,19.75,20H16"/><path d="M18,4V20"/><path d="M6.12,4V20"/><path d="M13.49782,22H10.50218l1.49782-2.50721Z"/><path d="M10.50218,2h2.99564l-1.06624 2.50721Z"/></svg>';
+      timeRow.appendChild(setStartBtn);
+
+      const dash = document.createElement('span');
+      dash.className = 'dash';
+      dash.textContent = '—';
+      timeRow.appendChild(dash);
+
+      const endInput = document.createElement('input');
+      endInput.className = 'seg-input';
+      endInput.type = 'text';
+      endInput.placeholder = 'End (optional)';
+      endInput.value = typeof seg.end === 'number' && seg.end > seg.start ? fmtTime(seg.end) : '';
+      endInput.dataset.role = 'edit-end';
+      timeRow.appendChild(endInput);
+
+      const setEndBtn = document.createElement('button');
+      setEndBtn.className = 'iconbtn sm';
+      setEndBtn.type = 'button';
+      setEndBtn.setAttribute('aria-label', 'Use current as End');
+      setEndBtn.dataset.action = 'use-current-end';
+      setEndBtn.innerHTML = '<svg id="Layer_3" data-name="Layer 3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18,8.97h4"/><path d="M18,15h4"/><path d="M12,14v2"/><path d="M12,8.36v2"/><path d="M6,15.03H2"/><path d="M6,9H2"/><path d="M8,20H4.25A2.24954,2.24954,0,0,1,2,17.75V6.25A2.24954,2.24954,0,0,1,4.25,4H8"/><path d="M16,4h3.75A2.24954,2.24954,0,0,1,22,6.25v11.5A2.24954,2.24954,0,0,1,19.75,20H16"/><path d="M18,4V20"/><path d="M6.12,4V20"/><path d="M13.49782,22H10.50218l1.49782-2.50721Z"/><path d="M10.50218,2h2.99564l-1.06624 2.50721Z"/></svg>';
+      timeRow.appendChild(setEndBtn);
+
+      editWrap.appendChild(timeRow);
+
+      const actions = document.createElement('div');
+      actions.className = 'seg-actions';
+
+      const saveBtn = document.createElement('button');
+      saveBtn.className = 'btn tg-primary small';
+      saveBtn.type = 'button';
+      saveBtn.dataset.action = 'save-edit';
+      saveBtn.textContent = 'Save';
+      actions.appendChild(saveBtn);
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'btn tg-secondary small';
+      cancelBtn.type = 'button';
+      cancelBtn.dataset.action = 'cancel-edit';
+      cancelBtn.textContent = 'Cancel';
+      actions.appendChild(cancelBtn);
+
+      editWrap.appendChild(actions);
+      item.appendChild(editWrap);
+    } else {
+      const actions = document.createElement('div');
+      actions.className = 'seg-actions';
+
+      const playBtn = document.createElement('button');
+      playBtn.className = 'iconbtn sm';
+      playBtn.type = 'button';
+      playBtn.setAttribute('aria-label', 'Play segment');
+      playBtn.dataset.action = 'play';
+      playBtn.innerHTML = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g><path d="M19.119,6v12c0,1.105 -0.895,2 -2,2h-10.238c-1.105,0 -2,-0.895 -2,-2v-12c0,-1.105 0.895,-2 2,-2h10.239c1.104,0 1.999,0.895 1.999,2Z"/><path d="M19.119,6h0.881c1.105,0 2,0.895 2,2v8c0,1.105 -0.895,2 -2,2h-0.881"/><path d="M4.881,18h-0.881c-1.105,0 -2,-0.895 -2,-2v-8c0,-1.105 0.895,-2 2,-2h0.881"/><path d="M10.941,9.058l3.882,2.296c0.491,0.29 0.491,1.001 0,1.291l-3.882,2.296c-0.5,0.296 -1.132,-0.065 -1.132,-0.646v-4.591c0,-0.581 0.632,-0.942 1.132,-0.646Z"/></g></svg>';
+      actions.appendChild(playBtn);
+
+      const goBtn = document.createElement('button');
+      goBtn.className = 'iconbtn sm';
+      goBtn.type = 'button';
+      goBtn.setAttribute('aria-label', 'Go to time');
+      goBtn.dataset.action = 'go';
+      goBtn.innerHTML = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g><path d="M19,12h-14"/><path d="M14,17l5,-5"/><path d="M14,7l5,5"/></g></svg>';
+      actions.appendChild(goBtn);
+
+      item.appendChild(actions);
+    }
+
+    frag.appendChild(item);
+  });
+
+  els.segments.appendChild(frag);
+  saveSegments();
+}
+
+function computeVideoId(file) {
+  return `${file.name}__${file.size || 0}__${file.lastModified || 0}`;
+}
+
+function resetVideo(clearMeta = true) {
+  if (state.objectUrl) {
+    try { URL.revokeObjectURL(state.objectUrl); } catch {}
+  }
+  state.objectUrl = null;
+  els.video.removeAttribute('src');
+  els.video.load();
+  els.currentTime.textContent = '00:00';
+  els.duration.textContent = '00:00';
+  els.seekBar.value = 0;
+  els.seekBar.max = 0;
+  if (clearMeta) {
+    state.videoId = null;
+    state.videoMeta = null;
+    els.videoMeta.textContent = '';
+  }
+  els.playerWrap.hidden = true;
+  els.dropZone.hidden = false;
+  state.editingId = null;
+  updatePlayUi();
+}
+
+function isSupportedVideo(file) {
+  if (!file) return false;
+  if (file.type && file.type.startsWith('video/')) return true;
+  const name = (file.name || '').toLowerCase();
+  return name.endsWith('.mp4') || name.endsWith('.m4v') || name.endsWith('.mov');
+}
+
+function handleFile(file) {
+  if (!isSupportedVideo(file)) {
+    announce('Unsupported file. Please choose a video file (preferably .mp4).');
+    return;
+  }
+  resetVideo(false);
+  state.videoId = computeVideoId(file);
+  state.videoMeta = { name: file.name || 'video', size: file.size || 0, lastModified: file.lastModified || 0 };
+  setVideoMeta(state.videoMeta);
+  try {
+    state.objectUrl = URL.createObjectURL(file);
+  } catch {
+    announce('Failed to load the selected file.');
+    return;
+  }
+  els.video.src = state.objectUrl;
+  els.playerWrap.hidden = false;
+  els.dropZone.hidden = true;
+
+  state.segments = loadSegments(state.videoId);
+
+  if (!state.segments.length) {
+    const hist = getHistoryItem(state.videoMeta.name);
+    if (hist && Array.isArray(hist.segments) && hist.segments.length) {
+      state.segments = hist.segments.map((s, i) => ({
+        id: Date.now() + i,
+        start: typeof s.start === 'number' ? s.start : 0,
+        end: typeof s.end === 'number' ? s.end : null,
+        text: (s.text || '').trim()
+      }));
+    }
+  }
+
+  renderSegments();
+  localStorage.setItem(`${LS_PREFIX}currentVideoId`, state.videoId);
+  localStorage.setItem(`${LS_PREFIX}currentVideoMeta`, JSON.stringify(state.videoMeta));
+  announce(`Loaded ${state.videoMeta.name}`);
+}
+
+function addSegmentFromForm() {
+  if (!state.videoId) return;
+  const text = els.commentInput.value.trim();
+  const current = els.video.currentTime || 0;
+  const id = Date.now() + Math.floor(Math.random() * 1000);
+  const seg = { id, start: current, end: null, text };
+  state.segments.push(seg);
+  renderSegments();
+  const el = els.segments.querySelector(`[data-id="${id}"]`);
+  if (el) {
+    el.classList.add('new');
+    setTimeout(() => el.classList.remove('new'), 300);
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  els.commentInput.value = '';
+  announce(`Added segment at ${fmtTime(current)}`);
+}
+
+function findSegmentIndex(id) {
+  return state.segments.findIndex(s => s.id === id);
+}
+
+function onSegmentsClick(e) {
+  const article = e.target.closest('.segment');
+  if (!article) return;
+  const id = Number(article.dataset.id);
+  const idx = findSegmentIndex(id);
+  if (idx < 0) return;
+  const actionEl = e.target.closest('[data-action]');
+  if (!actionEl) {
+    if (state.editingId !== id) {
+      state.editingId = id;
+      renderSegments();
+    }
+    return;
+  }
+  const action = actionEl.dataset.action;
+  const seg = state.segments[idx];
+
+  if (action === 'play') {
+    els.video.currentTime = seg.start;
+    els.video.play().catch(() => {});
+  } else if (action === 'go') {
+    els.video.currentTime = seg.start;
+    els.video.pause();
+    announce(`Moved to ${fmtTime(seg.start)}`);
+  } else if (action === 'delete') {
+    state.segments.splice(idx, 1);
+    if (state.editingId === id) state.editingId = null;
+    renderSegments();
+    announce(`Deleted segment at ${fmtTime(seg.start)}`);
+  } else if (action === 'cancel-edit') {
+    state.editingId = null;
+    renderSegments();
+  } else if (action === 'use-current-start') {
+    const input = article.querySelector('[data-role="edit-start"]');
+    input.value = fmtTime(els.video.currentTime || 0);
+  } else if (action === 'use-current-end') {
+    const input = article.querySelector('[data-role="edit-end"]');
+    input.value = fmtTime(els.video.currentTime || 0);
+  } else if (action === 'save-edit') {
+    const textInput = article.querySelector('[data-role="edit-text"]');
+    const startInput = article.querySelector('[data-role="edit-start"]');
+    const endInput = article.querySelector('[data-role="edit-end"]');
+    const startVal = parseTime(startInput.value);
+    const endVal = parseTime(endInput.value);
+    const dur = Number.isFinite(els.video.duration) ? els.video.duration : Infinity;
+
+    if (startVal == null) {
+      announce('Invalid start time');
+      startInput.focus();
+      return;
+    }
+    if (endInput.value.trim() && endVal == null) {
+      announce('Invalid end time');
+      endInput.focus();
+      return;
+    }
+    if (endVal != null && endVal < startVal) {
+      announce('End must be after start');
+      endInput.focus();
+      return;
+    }
+    if (startVal > dur || (endVal != null && endVal > dur)) {
+      announce('Times exceed video duration');
+      return;
+    }
+    seg.text = textInput.value.trim();
+    seg.start = startVal;
+    seg.end = endVal != null ? endVal : null;
+    state.editingId = null;
+    renderSegments();
+    announce('Segment updated');
+  }
+}
+
+function updateTimeUi() {
+  els.currentTime.textContent = fmtTime(els.video.currentTime);
+  if (Number.isFinite(els.video.duration)) {
+    els.seekBar.max = els.video.duration;
+    els.seekBar.value = els.video.currentTime;
+  }
+}
+
+function onLoadedMetadata() {
+  els.duration.textContent = fmtTime(els.video.duration);
+  els.seekBar.max = els.video.duration || 0;
+}
+
+function highlightActiveSegment() {
+  if (!state.segments.length) return;
+  const t = els.video.currentTime;
+  let activeId = null;
+  for (let i = 0; i < state.segments.length; i++) {
+    const s = state.segments[i];
+    const endBound = typeof s.end === 'number' ? s.end : Infinity;
+    if (t >= s.start && t <= endBound + 0.25) {
+      activeId = s.id;
+    }
+  }
+  els.segments.querySelectorAll('.segment').forEach(el => {
+    const id = Number(el.dataset.id);
+    const isEditing = id === state.editingId;
+    const isActiveByTime = id === activeId;
+    if (isEditing || isActiveByTime) el.classList.add('active');
+    else el.classList.remove('active');
+  });
+}
+
+function buildMarkdown() {
+  const lines = [];
+  lines.push('# Video Timestamp Notes');
+  if (state.videoMeta) lines.push(`Video: ${state.videoMeta.name}`);
+  lines.push('');
+  const sorted = [...state.segments].sort((a, b) => a.start - b.start);
+  for (const s of sorted) {
+    const label = timeLabel(s);
+    const note = (s.text ?? '').replace(/\s+/g, ' ').trim();
+    lines.push(`- ${label} — ${note}`);
+  }
+  return lines.join('\n');
+}
+
+function exportTxt() {
+  if (!state.segments.length) return;
+  const blob = new Blob([buildMarkdown()], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const base = state.videoMeta?.name?.replace(/\.[^.]+$/, '') || 'notes';
+  a.download = `${base}-timestamps.txt`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+async function copyMarkdown() {
+  if (!state.segments.length) return;
+  const text = buildMarkdown();
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      announce('Copied Markdown to clipboard');
+      return;
+    }
+    throw new Error('insecure');
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try { document.execCommand('copy'); } catch {}
+    document.body.removeChild(ta);
+    announce('Copied Markdown to clipboard');
+  }
+}
+
+async function shareMarkdown() {
+  if (!state.segments.length) return;
+  const text = buildMarkdown();
+  const title = state.videoMeta?.name || 'Video notes';
+  if (navigator.share) {
+    try {
+      await navigator.share({ title, text });
+      announce('Share invoked');
+    } catch {
+      announce('Share cancelled');
+    }
+  } else {
+    await copyMarkdown();
+    announce('Sharing not supported. Copied to clipboard instead');
+  }
+}
+
+function loadHistoryIndex() {
+  try {
+    const raw = localStorage.getItem(LS_HISTORY_INDEX);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+function saveHistoryIndex(list) {
+  localStorage.setItem(LS_HISTORY_INDEX, JSON.stringify(list));
+}
+function getHistoryItem(name) {
+  try {
+    const raw = localStorage.getItem(historyItemKey(name));
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+function setHistoryItem(name, data) {
+  localStorage.setItem(historyItemKey(name), JSON.stringify(data));
+}
+function deleteHistoryItem(name) {
+  localStorage.removeItem(historyItemKey(name));
+  const idx = loadHistoryIndex().filter(x => x.name !== name);
+  saveHistoryIndex(idx);
+}
+function clearAllHistory() {
+  const idx = loadHistoryIndex();
+  for (const it of idx) {
+    localStorage.removeItem(historyItemKey(it.name));
+  }
+  saveHistoryIndex([]);
+}
+
+function upsertHistoryFromState() {
+  const name = state.videoMeta?.name;
+  if (!name) return;
+  const simplified = state.segments.map(s => ({
+    start: typeof s.start === 'number' ? s.start : 0,
+    end: typeof s.end === 'number' ? s.end : null,
+    text: (s.text || '').trim()
+  }));
+  const savedAt = new Date().toISOString();
+  const size = state.videoMeta?.size || 0;
+  const lastModified = state.videoMeta?.lastModified || null;
+  setHistoryItem(name, { name, savedAt, size, lastModified, count: simplified.length, segments: simplified });
+
+  const index = loadHistoryIndex();
+  const existing = index.find(x => x.name === name);
+  if (existing) {
+    existing.savedAt = savedAt;
+    existing.count = simplified.length;
+    existing.size = size;
+    existing.lastModified = lastModified;
+  } else {
+    index.push({ name, savedAt, count: simplified.length, size, lastModified });
+  }
+  index.sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
+  saveHistoryIndex(index);
+}
+
+function renderHistory() {
+  const index = loadHistoryIndex();
+  els.historyList.innerHTML = '';
+  els.historyEmpty.hidden = index.length !== 0;
+  if (!index.length) return;
+  const frag = document.createDocumentFragment();
+
+  index.forEach(entry => {
+    const card = document.createElement('article');
+    card.className = 'history-card tg-card';
+    card.setAttribute('role', 'listitem');
+    card.dataset.name = entry.name;
+
+    const row = document.createElement('div');
+    row.className = 'history-row';
+    row.dataset.action = 'toggle';
+
+    const info = document.createElement('div');
+    info.className = 'history-info';
+
+    const ttl = document.createElement('div');
+    ttl.className = 'history-title';
+    ttl.textContent = entry.name;
+    info.appendChild(ttl);
+
+    const meta = document.createElement('div');
+    meta.className = 'history-meta';
+
+    const count = document.createElement('span');
+    count.className = 'history-count';
+    count.textContent = `${entry.count || 0}`;
+
+    const sizeEl = document.createElement('span');
+    sizeEl.textContent = bytesToMB(entry.size);
+
+    const timeEl = document.createElement('span');
+    timeEl.textContent = fmtHM(entry.savedAt);
+
+    meta.appendChild(count);
+    if (sizeEl.textContent) meta.appendChild(sizeEl);
+    if (timeEl.textContent) meta.appendChild(timeEl);
+    info.appendChild(meta);
+
+    row.appendChild(info);
+
+    const actions = document.createElement('div');
+    actions.className = 'history-actions';
+
+    const del = document.createElement('button');
+    del.className = 'iconbtn sm';
+    del.setAttribute('aria-label', 'Delete history item');
+    del.dataset.action = 'delete';
+    del.innerHTML = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M15.93749,6.5V4.125A1.125,1.125,0,0,0,14.81249,3h-5.625a1.125,1.125,0,0,0-1.125,1.125V6.5"/><path d="M18.74036,6.5l-.95557,12.42255A2.25,2.25,0,0,1,15.54144,21H8.45856a2.25,2.25,0,0,1-2.24335-2.07745L5.25964,6.5"/><line x1="20" y1="6.5" x2="4" y2="6.5"/><line x1="9.99999" y1="14.99997" x2="13.99999" y2="14.99997"/><line x1="9.99999" y1="11.99997" x2="13.99999" y2="11.99997"/></svg>';
+    actions.appendChild(del);
+
+    row.appendChild(actions);
+    card.appendChild(row);
+
+    const notesWrap = document.createElement('div');
+    notesWrap.className = 'history-notes';
+    notesWrap.hidden = true;
+
+    card.appendChild(notesWrap);
+    frag.appendChild(card);
+  });
+
+  els.historyList.appendChild(frag);
+}
+
+function buildHistoryMarkdown(item) {
+  const lines = [];
+  lines.push('# Video Timestamp Notes');
+  lines.push(`Video: ${item.name}`);
+  if (item.size) lines.push(`Size: ${bytesToMB(item.size)}`);
+  if (item.lastModified) lines.push(`Last Modified: ${new Date(item.lastModified).toLocaleString()}`);
+  lines.push('');
+  const sorted = [...(item.segments || [])].sort((a, b) => (a.start || 0) - (b.start || 0));
+  for (const s of sorted) {
+    const a = typeof s.start === 'number' ? fmtTime(s.start) : '';
+    const label = typeof s.end === 'number' && s.end > s.start ? `${a}–${fmtTime(s.end)}` : a;
+    const note = (s.text ?? '').replace(/\s+/g, ' ').trim();
+    lines.push(label ? `- ${label} — ${note}` : `- ${note}`);
+  }
+  return lines.join('\n');
+}
+
+async function copyHistoryItem(name) {
+  const data = getHistoryItem(name);
+  if (!data) return;
+  const text = buildHistoryMarkdown(data);
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      announce('Copied history to clipboard');
+      return;
+    }
+    throw new Error('insecure');
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try { document.execCommand('copy'); } catch {}
+    document.body.removeChild(ta);
+    announce('Copied history to clipboard');
+  }
+}
+
+function onHistoryListClick(e) {
+  const card = e.target.closest('.history-card');
+  if (!card) return;
+  const name = card.dataset.name;
+  const actionEl = e.target.closest('[data-action]');
+  if (!actionEl) return;
+  const action = actionEl.dataset.action;
+
+  if (action === 'delete') {
+    deleteHistoryItem(name);
+    renderHistory();
+    announce('History item deleted');
+    return;
+  }
+
+  if (action === 'toggle') {
+    const opened = card.classList.toggle('open');
+    const notesWrap = card.querySelector('.history-notes');
+    if (opened) {
+      const data = getHistoryItem(name);
+      notesWrap.innerHTML = '';
+      const metaDetail = document.createElement('div');
+      metaDetail.className = 'history-meta-detail';
+      const sizeText = bytesToMB(data?.size);
+      const lmText = data?.lastModified ? new Date(data.lastModified).toLocaleString() : '';
+      metaDetail.innerHTML = `
+<strong>File:</strong> ${data?.name || ''}<br>
+${sizeText ? `<strong>Size:</strong> ${sizeText}<br>` : ''}
+${lmText ? `<strong>Last Modified:</strong> ${lmText}` : ''}`.trim();
+      notesWrap.appendChild(metaDetail);
+
+      const segs = (data && Array.isArray(data.segments)) ? data.segments : [];
+      const frag = document.createDocumentFragment();
+      segs.forEach(s => {
+        const div = document.createElement('div');
+        div.className = 'history-note';
+        const lbl = typeof s.start === 'number'
+          ? (typeof s.end === 'number' && s.end > s.start
+            ? `${fmtTime(s.start)}–${fmtTime(s.end)}`
+            : fmtTime(s.start))
+          : '';
+        div.textContent = lbl ? `${lbl} — ${s.text || ''}` : (s.text || '');
+        frag.appendChild(div);
+      });
+      notesWrap.appendChild(frag);
+
+      const controls = document.createElement('div');
+      controls.className = 'history-controls';
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'btn tg-primary small';
+      copyBtn.type = 'button';
+      copyBtn.textContent = 'Copy';
+      copyBtn.dataset.action = 'copy';
+      controls.appendChild(copyBtn);
+      notesWrap.appendChild(controls);
+
+      notesWrap.hidden = false;
+    } else {
+      notesWrap.hidden = true;
+    }
+  }
+
+  if (action === 'copy') {
+    copyHistoryItem(name);
+  }
+}
+
+function updatePlayUi() {
+  const playing = !els.video.paused && !els.video.ended;
+  els.iconPlay.hidden = playing;
+  els.iconPause.hidden = !playing;
+  els.ctrlPlay.classList.toggle('active', playing);
+}
+
+function clearAll() {
+  const ok = confirm('This will clear the current video and its notes for this session. History will be preserved. Continue?');
+  if (!ok) return;
+  const currentId = state.videoId;
+  if (currentId) {
+    localStorage.removeItem(storageKey(currentId));
+  }
+  localStorage.removeItem(`${LS_PREFIX}currentVideoId`);
+  localStorage.removeItem(`${LS_PREFIX}currentVideoMeta`);
+  state.segments = [];
+  state.videoId = null;
+  state.videoMeta = null;
+  renderSegments();
+  resetVideo();
+  els.dropZone.focus();
+  announce('Cleared current session');
+}
+
+function setEmptyState() {
+  els.segmentsHelp.hidden = state.segments.length !== 0;
+}
+
+function initDnD() {
+  ['dragenter', 'dragover'].forEach(evt => {
+    els.dropZone.addEventListener(evt, e => {
+      e.preventDefault();
+      e.stopPropagation();
+      els.dropZone.classList.add('dragover');
+    });
+  });
+  ['dragleave', 'drop'].forEach(evt => {
+    els.dropZone.addEventListener(evt, e => {
+      e.preventDefault();
+      e.stopPropagation();
+      els.dropZone.classList.remove('dragover');
+    });
+  });
+  els.dropZone.addEventListener('drop', e => {
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  });
+  els.dropZone.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      els.fileInput.click();
+    }
+  });
+  document.addEventListener('dragover', e => { e.preventDefault(); });
+  document.addEventListener('drop', e => {
+    if (!els.dropZone.contains(e.target)) e.preventDefault();
+  });
+}
+
+function restoreLastSession() {
+  const vid = localStorage.getItem(`${LS_PREFIX}currentVideoId`);
+  const metaRaw = localStorage.getItem(`${LS_PREFIX}currentVideoMeta`);
+  if (!vid || !metaRaw) return;
+  try {
+    const meta = JSON.parse(metaRaw);
+    state.videoId = vid;
+    state.videoMeta = meta;
+    setVideoMeta(meta);
+    state.segments = loadSegments(vid);
+    renderSegments();
+  } catch {}
+}
+
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  if (!location.protocol.startsWith('http')) return;
+  const swCode = `
+self.addEventListener('install', e => {
+self.skipWaiting();
+e.waitUntil(caches.open('s5fdb-cache-v1').then(c => c.addAll(['./'])));
+});
+self.addEventListener('activate', e => self.clients.claim());
+self.addEventListener('fetch', e => {
+if (e.request.method !== 'GET') return;
+e.respondWith(
+caches.match(e.request).then(r => r || fetch(e.request).then(resp => {
+const copy = resp.clone();
+caches.open('s5fdb-cache-v1').then(c => c.put(e.request, copy));
+return resp;
+}).catch(() => r))
+);
+});`;
+  const blob = new Blob([swCode], { type: 'text/javascript' });
+  const url = URL.createObjectURL(blob);
+  navigator.serviceWorker.register(url).catch(() => {});
+}
+
+function togglePlay() {
+  if (els.video.paused || els.video.ended) {
+    els.video.play().catch(() => {});
+  } else {
+    els.video.pause();
+  }
+  updatePlayUi();
+}
+
+function bindEvents() {
+  els.fileInput.addEventListener('change', e => {
+    const file = e.target.files && e.target.files[0];
+    if (file) handleFile(file);
+    els.fileInput.value = '';
+  });
+  els.replaceBtn.addEventListener('click', () => els.fileInput.click());
+  els.commentForm.addEventListener('submit', e => {
+    e.preventDefault();
+    if (!els.commentInput.value.trim()) return;
+    addSegmentFromForm();
+  });
+  els.commentInput.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault();
+      if (!els.commentInput.value.trim()) return;
+      addSegmentFromForm();
+    }
+  });
+  els.segments.addEventListener('click', onSegmentsClick);
+  els.video.addEventListener('timeupdate', () => {
+    updateTimeUi();
+    highlightActiveSegment();
+  });
+  els.video.addEventListener('loadedmetadata', onLoadedMetadata);
+  els.video.addEventListener('error', () => {
+    announce('Error loading video. This file format may not be supported by your browser.');
+  });
+  els.video.addEventListener('play', updatePlayUi);
+  els.video.addEventListener('pause', updatePlayUi);
+  els.video.addEventListener('ended', updatePlayUi);
+
+  els.exportBtn.addEventListener('click', exportTxt);
+  els.copyBtn.addEventListener('click', copyMarkdown);
+  els.shareBtn.addEventListener('click', shareMarkdown);
+  els.clearBtn.addEventListener('click', clearAll);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) saveSegments();
+  });
+  window.addEventListener('beforeunload', saveSegments);
+
+  els.ctrlPlay.addEventListener('click', togglePlay);
+  els.video.addEventListener('click', togglePlay);
+  els.ctrlBack.addEventListener('click', () => {
+    els.video.currentTime = Math.max(0, (els.video.currentTime || 0) - 5);
+  });
+  els.ctrlFwd.addEventListener('click', () => {
+    const dur = Number.isFinite(els.video.duration) ? els.video.duration : Infinity;
+    els.video.currentTime = Math.min(dur, (els.video.currentTime || 0) + 5);
+  });
+  els.ctrlMute.addEventListener('click', () => {
+    els.video.muted = !els.video.muted;
+    els.ctrlMute.classList.toggle('active', els.video.muted);
+  });
+  els.seekBar.addEventListener('input', () => {
+    const v = Number(els.seekBar.value);
+    if (Number.isFinite(v)) els.video.currentTime = v;
+  });
+
+  els.historyBtn.addEventListener('click', () => {
+    renderHistory();
+    els.historyPanel.hidden = false;
+  });
+  els.historyBack.addEventListener('click', () => {
+    els.historyPanel.hidden = true;
+  });
+  els.historyClearAll.addEventListener('click', () => {
+    const ok = confirm('This will delete all saved history (notes only). Continue?');
+    if (!ok) return;
+    clearAllHistory();
+    renderHistory();
+    announce('History cleared');
+  });
+  els.historyList.addEventListener('click', onHistoryListClick);
+}
+
+function init() {
+  initDnD();
+  bindEvents();
+  restoreLastSession();
+  setEmptyState();
+  registerServiceWorker();
+  updatePlayUi();
+}
+
+init();
+
+window.addEventListener('DOMContentLoaded', () => {
+  const tg = window.Telegram?.WebApp;
+  if (!tg) return;
+  tg.ready();
+  tg.expand();
+  tg.MainButton.setText('Export to bot');
+  tg.MainButton.show();
+  tg.MainButton.onClick(() => {
+    const text = (window.buildExportText?.() || window.buildMarkdown?.() || 'No data');
+    tg.sendData(JSON.stringify({ action: 'export', content: text }));
+  });
+  tg.BackButton.show();
+  tg.BackButton.onClick(() => tg.close());
+});
+
+window.buildMarkdown = buildMarkdown;
+  </script>
+</body>
+</html>
