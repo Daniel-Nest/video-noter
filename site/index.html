@@ -149,7 +149,7 @@ body {
   position: relative;
   display: grid;
   place-items: center;
-  border: 2px dashed var(--border);
+  border: none;
   border-radius: 18px;
   padding: 28px;
   background: #f8fafc;
@@ -162,10 +162,8 @@ body {
 }
 .dropzone:focus-visible {
   box-shadow: 0 0 0 4px var(--ring);
-  border-color: var(--brand);
 }
 .dropzone.dragover {
-  border-color: var(--brand);
   background: #eef7ff;
   transform: translateY(-1px);
 }
@@ -181,6 +179,36 @@ body {
 .dz-icon { font-size: 36px; margin-bottom: 8px; }
 .dz-text { color: var(--muted); font-size: 14px; }
 
+/* Alternate import controls */
+.alt-import {
+  padding: 12px 14px 4px 14px;
+  display: grid;
+  gap: 8px;
+}
+.alt-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+.link-icon {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--fg);
+}
+.link-icon svg { width: 22px; height: 22px; display: block; }
+.link-icon svg, .link-icon svg * { stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.alt-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 /* Player */
 .player-wrap video {
   width: 100%;
@@ -188,6 +216,23 @@ body {
   display: block;
   background: #000;
   cursor: pointer;
+}
+.embed-wrap {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%;
+  background: #000;
+}
+.embed-wrap iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.player-wrap.link-mode .timebar,
+.player-wrap.link-mode .controlbar {
+  display: none;
 }
 
 /* Timebar */
@@ -712,7 +757,7 @@ svg path[d="M0 0h24v24H0Z"] {
 <section class="left">
 <div class="tg-card">
 <div id="dropZone" class="dropzone" tabindex="0" role="button" aria-label="Select or drop an MP4 video">
-<input id="fileInput" type="file" accept="video/mp4" aria-label="Choose MP4 file">
+<input id="fileInput" type="file" accept="video/mp4,video/webm,video/quicktime" aria-label="Choose video file">
 <div class="dz-inner">
 <div class="dz-icon" aria-hidden="true">📹</div>
 <div class="dz-text">
@@ -721,8 +766,25 @@ svg path[d="M0 0h24v24H0Z"] {
 </div>
 </div>
 
+<div class="alt-import" role="group" aria-label="Alternate import">
+<div class="alt-row">
+<span class="link-icon" aria-hidden="true">
+<?xml version="1.0" encoding="UTF-8"?><svg version="1.1" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke-linecap="round" stroke-width="1.5" stroke="#323232" fill="none" stroke-linejoin="round"><path d="M18.019 12.019l1.73-1.73 1.31425e-07-1.27505e-07c1.69259-1.64211 1.73352-4.34541.0914109-6.038 -1.64211-1.69259-4.34541-1.73352-6.038-.0914109 -.0309299.0300074-.0614038.0604812-.0914112.0914112l-3.7 3.7 3.85003e-08-3.8473e-08c-1.66735 1.66617-1.6683 4.36852-.00213697 6.03586 .000712046.00071255.00142434.00142485.00213689.00213689l-.0109998.0109999 3.48442e-08 3.41806e-08c.344635.338072.744788.614424 1.183.817"></path><path d="M12.806 9.193l-2.29249e-07-1.06151e-07c.438256.20293.838405.479618 1.183.818l2.3741e-07 2.37242e-07c1.66735 1.66617 1.6683 4.36852.00213642 6.03586 -.000712046.00071255-.00142434.00142485-.00213689.00213689l-3.7 3.7 1.31425e-07-1.27505e-07c-1.69259 1.64211-4.39589 1.60118-6.038-.0914109 -1.60706-1.65647-1.60706-4.29012-2.5501e-07-5.94659l1.73-1.73"></path></g><path fill="none" d="M0 0h24v24h-24Z"></path></svg>
+</span>
+<input id="linkInput" class="seg-input" type="url" placeholder="Paste video link (YouTube, Vimeo, MP4)" aria-label="Video link">
+<button id="addLinkBtn" type="button" class="btn tg-secondary" aria-label="Add link">
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="#323232" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></g></svg>
+<span>Add link</span>
+</button>
+</div>
+<p class="alt-hint">You can paste a link or a video file from the clipboard</p>
+</div>
+
 <div id="playerWrap" class="player-wrap" hidden>
 <video id="video" playsinline preload="metadata" aria-label="Video player"></video>
+<div id="embedWrap" class="embed-wrap" hidden>
+<iframe id="embedFrame" title="Embedded video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+</div>
 
 <div class="timebar" aria-live="polite">
 <span id="currentTime" aria-label="Current time">00:00</span>
@@ -876,6 +938,8 @@ const els = {
   fileInput: document.getElementById('fileInput'),
   playerWrap: document.getElementById('playerWrap'),
   video: document.getElementById('video'),
+  embedWrap: document.getElementById('embedWrap'),
+  embedFrame: document.getElementById('embedFrame'),
   currentTime: document.getElementById('currentTime'),
   duration: document.getElementById('duration'),
   seekBar: document.getElementById('seekBar'),
@@ -883,12 +947,13 @@ const els = {
   commentInput: document.getElementById('commentInput'),
   addBtn: document.getElementById('addBtn'),
   replaceBtn: document.getElementById('replaceBtn'),
+  clearBtn: document.getElementById('clearBtn'),
   segments: document.getElementById('segments'),
   segmentsHelp: document.getElementById('segmentsHelp'),
   countBadge: document.getElementById('countBadge'),
   exportBtn: document.getElementById('exportBtn'),
   copyBtn: document.getElementById('copyBtn'),
-  clearBtn: document.getElementById('clearBtn'),
+  shareBtn: document.getElementById('shareBtn'),
   videoMeta: document.getElementById('videoMeta'),
   live: document.getElementById('live'),
   ctrlPlay: document.getElementById('ctrlPlay'),
@@ -898,13 +963,14 @@ const els = {
   ctrlFwd: document.getElementById('ctrlFwd'),
   ctrlMute: document.getElementById('ctrlMute'),
   iconMuteSvg: document.getElementById('iconMuteSvg'),
-  shareBtn: document.getElementById('shareBtn'),
   historyBtn: document.getElementById('historyBtn'),
   historyPanel: document.getElementById('historyPanel'),
   historyBack: document.getElementById('historyBack'),
   historyClearAll: document.getElementById('historyClearAll'),
   historyList: document.getElementById('historyList'),
-  historyEmpty: document.getElementById('historyEmpty')
+  historyEmpty: document.getElementById('historyEmpty'),
+  linkInput: document.getElementById('linkInput'),
+  addLinkBtn: document.getElementById('addLinkBtn')
 };
 
 let state = {
@@ -913,8 +979,109 @@ let state = {
   objectUrl: null,
   segments: [],
   sortMode: 'time',
-  editingId: null
+  editingId: null,
+  source: null
 };
+
+/* Embed players controller */
+const embed = {
+  type: null,
+  yt: null,
+  vm: null,
+  ready: false
+};
+let ytApiReadyPromise = null;
+let vmApiReadyPromise = null;
+
+function ensureYouTubeAPI() {
+  if (window.YT && window.YT.Player) return Promise.resolve();
+  if (ytApiReadyPromise) return ytApiReadyPromise;
+  ytApiReadyPromise = new Promise(resolve => {
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(tag);
+    const prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => {
+      if (typeof prev === 'function') prev();
+      resolve();
+    };
+  });
+  return ytApiReadyPromise;
+}
+function ensureVimeoAPI() {
+  if (window.Vimeo && window.Vimeo.Player) return Promise.resolve();
+  if (vmApiReadyPromise) return vmApiReadyPromise;
+  vmApiReadyPromise = new Promise(resolve => {
+    const tag = document.createElement('script');
+    tag.src = 'https://player.vimeo.com/api/player.js';
+    tag.onload = () => resolve();
+    document.head.appendChild(tag);
+  });
+  return vmApiReadyPromise;
+}
+function destroyEmbedPlayers() {
+  try { if (embed.yt && embed.yt.destroy) embed.yt.destroy(); } catch {}
+  embed.yt = null;
+  try { if (embed.vm && embed.vm.destroy) embed.vm.destroy(); } catch {}
+  embed.vm = null;
+  embed.ready = false;
+  embed.type = null;
+}
+async function initYouTubePlayer() {
+  await ensureYouTubeAPI();
+  embed.yt = new YT.Player(els.embedFrame, {
+    host: 'https://www.youtube-nocookie.com',
+    events: {
+      onReady: () => {
+        embed.ready = true;
+        const updateTitle = () => {
+          try {
+            const data = embed.yt.getVideoData ? embed.yt.getVideoData() : null;
+            const title = data && data.title ? String(data.title).trim() : '';
+            if (title) {
+              const old = state.videoMeta?.name || '';
+              if (title !== old) renameHistoryIfNeeded(old, title);
+            } else {
+              setTimeout(updateTitle, 400);
+            }
+          } catch {
+            setTimeout(updateTitle, 400);
+          }
+        };
+        updateTitle();
+      },
+      onStateChange: () => {}
+    }
+  });
+  embed.type = 'youtube';
+}
+async function initVimeoPlayer() {
+  await ensureVimeoAPI();
+  embed.vm = new Vimeo.Player(els.embedFrame);
+  embed.ready = true;
+  embed.type = 'vimeo';
+  try {
+    embed.vm.getVideoTitle().then(title => {
+      title = String(title || '').trim();
+      if (title) {
+        const old = state.videoMeta?.name || '';
+        if (title !== old) renameHistoryIfNeeded(old, title);
+      }
+    }).catch(() => {});
+  } catch {}
+}
+async function getCurrentTimeFromEmbed() {
+  try {
+    if (embed.type === 'youtube' && embed.yt && embed.ready && typeof embed.yt.getCurrentTime === 'function') {
+      return embed.yt.getCurrentTime() || 0;
+    }
+    if (embed.type === 'vimeo' && embed.vm && embed.ready && typeof embed.vm.getCurrentTime === 'function') {
+      const t = await embed.vm.getCurrentTime();
+      return t || 0;
+    }
+  } catch {}
+  return 0;
+}
 
 function fmtTime(sec) {
   sec = Math.max(0, Math.floor(sec || 0));
@@ -966,7 +1133,8 @@ function announce(msg) {
 
 function setVideoMeta(meta) {
   const sizeMB = meta.size ? (meta.size / (1024 * 1024)).toFixed(1) : '';
-  els.videoMeta.textContent = sizeMB ? `${meta.name} • ${sizeMB} MB` : meta.name;
+  const urlPart = meta.url ? ` • ${meta.url}` : '';
+  els.videoMeta.textContent = sizeMB ? `${meta.name} • ${sizeMB} MB${urlPart}` : `${meta.name}${urlPart}`;
 }
 
 function storageKey(id) {
@@ -1182,14 +1350,22 @@ function renderSegments() {
 function computeVideoId(file) {
   return `${file.name}__${file.size || 0}__${file.lastModified || 0}`;
 }
+function computeLinkId(url) {
+  return `link__${url}`;
+}
 
 function resetVideo(clearMeta = true) {
   if (state.objectUrl) {
     try { URL.revokeObjectURL(state.objectUrl); } catch {}
   }
   state.objectUrl = null;
+  destroyEmbedPlayers();
   els.video.removeAttribute('src');
   els.video.load();
+  els.embedFrame.src = '';
+  els.embedWrap.hidden = true;
+  els.video.hidden = false;
+  els.playerWrap.classList.remove('link-mode');
   els.currentTime.textContent = '00:00';
   els.duration.textContent = '00:00';
   els.seekBar.value = 0;
@@ -1198,6 +1374,7 @@ function resetVideo(clearMeta = true) {
     state.videoId = null;
     state.videoMeta = null;
     els.videoMeta.textContent = '';
+    state.source = null;
   }
   els.playerWrap.hidden = true;
   els.dropZone.hidden = false;
@@ -1209,17 +1386,18 @@ function isSupportedVideo(file) {
   if (!file) return false;
   if (file.type && file.type.startsWith('video/')) return true;
   const name = (file.name || '').toLowerCase();
-  return name.endsWith('.mp4') || name.endsWith('.m4v') || name.endsWith('.mov');
+  return name.endsWith('.mp4') || name.endsWith('.m4v') || name.endsWith('.mov') || name.endsWith('.webm');
 }
 
 function handleFile(file) {
   if (!isSupportedVideo(file)) {
-    announce('Unsupported file. Please choose a video file (preferably .mp4).');
+    announce('Unsupported file. Please choose a video file (mp4, webm, mov).');
     return;
   }
   resetVideo(false);
+  state.source = 'file';
   state.videoId = computeVideoId(file);
-  state.videoMeta = { name: file.name || 'video', size: file.size || 0, lastModified: file.lastModified || 0 };
+  state.videoMeta = { name: file.name || 'video', size: file.size || 0, lastModified: file.lastModified || 0, url: null, provider: null };
   setVideoMeta(state.videoMeta);
   try {
     state.objectUrl = URL.createObjectURL(file);
@@ -1228,6 +1406,9 @@ function handleFile(file) {
     return;
   }
   els.video.src = state.objectUrl;
+  els.video.hidden = false;
+  els.embedWrap.hidden = true;
+  els.playerWrap.classList.remove('link-mode');
   els.playerWrap.hidden = false;
   els.dropZone.hidden = true;
 
@@ -1251,10 +1432,177 @@ function handleFile(file) {
   announce(`Loaded ${state.videoMeta.name}`);
 }
 
-function addSegmentFromForm() {
+function isDirectVideoUrl(u) {
+  try {
+    const url = new URL(u);
+    const p = url.pathname.toLowerCase();
+    return p.endsWith('.mp4') || p.endsWith('.m4v') || p.endsWith('.webm') || p.endsWith('.mov');
+  } catch { return false; }
+}
+
+function parseVideoLink(u) {
+  try {
+    const url = new URL(u);
+    const host = url.hostname.toLowerCase();
+    if (host.includes('youtube.com') || host.includes('youtu.be')) {
+      let id = '';
+      if (host.includes('youtu.be')) {
+        id = url.pathname.slice(1);
+      } else {
+        id = url.searchParams.get('v') || '';
+        if (!id && url.pathname.startsWith('/shorts/')) id = url.pathname.split('/')[2] || '';
+      }
+      if (id) {
+        const params = new URLSearchParams();
+        params.set('rel', '0');
+        params.set('modestbranding', '1');
+        params.set('playsinline', '1');
+        params.set('enablejsapi', '1');
+        if (location.origin && /^https?:/.test(location.protocol)) {
+          params.set('origin', location.origin);
+        }
+        const embedUrl = `https://www.youtube-nocookie.com/embed/${id}?${params.toString()}`;
+        return { type: 'youtube', id, embedUrl };
+      }
+    }
+    if (host.includes('vimeo.com')) {
+      const parts = url.pathname.split('/').filter(Boolean);
+      const id = parts.find(s => /^\d+$/.test(s));
+      if (id) {
+        const params = 'title=0&byline=0&portrait=0&dnt=1';
+        const embedUrl = `https://player.vimeo.com/video/${id}?${params}`;
+        return { type: 'vimeo', id, embedUrl };
+      }
+    }
+    if (isDirectVideoUrl(u)) {
+      return { type: 'direct', srcUrl: u };
+    }
+    return { type: 'unknown' };
+  } catch {
+    return { type: 'unknown' };
+  }
+}
+
+function nameFromUrl(u) {
+  try {
+    const url = new URL(u);
+    const host = url.hostname.replace(/^www\./, '');
+    const v = url.searchParams.get('v');
+    const last = url.pathname.split('/').filter(Boolean).pop() || '';
+    const base = v || last || host;
+    return `${host} • ${base}`;
+  } catch {
+    return u;
+  }
+}
+
+function renameHistoryIfNeeded(oldName, newName) {
+  if (!newName || newName === oldName) {
+    if (state.videoMeta && newName) {
+      state.videoMeta.name = newName;
+      setVideoMeta(state.videoMeta);
+    }
+    return;
+  }
+  const oldItem = getHistoryItem(oldName);
+  if (oldItem) {
+    oldItem.name = newName;
+    setHistoryItem(newName, oldItem);
+    localStorage.removeItem(historyItemKey(oldName));
+    const idx = loadHistoryIndex().filter(x => x.name !== oldName);
+    idx.push({ name: newName, savedAt: oldItem.savedAt, count: (oldItem.segments || []).length, size: oldItem.size || 0, lastModified: oldItem.lastModified || null, url: oldItem.url || null, provider: oldItem.provider || null });
+    idx.sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
+    saveHistoryIndex(idx);
+    renderHistory();
+  }
+  if (state.videoMeta) {
+    state.videoMeta.name = newName;
+    setVideoMeta(state.videoMeta);
+  }
+  upsertHistoryFromState();
+}
+
+async function handleLink(u) {
+  const parsed = parseVideoLink(u);
+  resetVideo(false);
+  state.source = 'link';
+  let metaName = nameFromUrl(u);
+  if (parsed.type === 'direct') {
+    state.videoId = computeLinkId(u);
+    state.videoMeta = { name: metaName, size: 0, lastModified: Date.now(), url: u, provider: 'direct' };
+    setVideoMeta(state.videoMeta);
+    els.video.src = u;
+    els.video.hidden = false;
+    els.embedWrap.hidden = true;
+    els.playerWrap.classList.remove('link-mode');
+  } else if (parsed.type === 'youtube' || parsed.type === 'vimeo') {
+    state.videoId = computeLinkId(u);
+    state.videoMeta = { name: metaName, size: 0, lastModified: Date.now(), url: u, provider: parsed.type };
+    setVideoMeta(state.videoMeta);
+    destroyEmbedPlayers();
+    els.embedFrame.src = parsed.embedUrl;
+    els.embedWrap.hidden = false;
+    els.video.hidden = true;
+    els.playerWrap.classList.add('link-mode');
+    if (parsed.type === 'youtube') {
+      await initYouTubePlayer();
+    } else {
+      await initVimeoPlayer();
+    }
+  } else {
+    announce('Unsupported link. Please provide a direct video URL, YouTube or Vimeo link.');
+    return;
+  }
+
+  els.playerWrap.hidden = false;
+  els.dropZone.hidden = true;
+
+  state.segments = loadSegments(state.videoId);
+
+  if (!state.segments.length) {
+    const hist = getHistoryItem(state.videoMeta.name);
+    if (hist && Array.isArray(hist.segments) && hist.segments.length) {
+      state.segments = hist.segments.map((s, i) => ({
+        id: Date.now() + i,
+        start: typeof s.start === 'number' ? s.start : 0,
+        end: typeof s.end === 'number' ? s.end : null,
+        text: (s.text || '').trim()
+      }));
+    }
+  }
+
+  renderSegments();
+  localStorage.setItem(`${LS_PREFIX}currentVideoId`, state.videoId);
+  localStorage.setItem(`${LS_PREFIX}currentVideoMeta`, JSON.stringify(state.videoMeta));
+  announce('Loaded link');
+}
+
+async function tryPasteFromClipboard() {
+  try {
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      const text = (await navigator.clipboard.readText()).trim();
+      if (text) {
+        if (/^https?:\/\//i.test(text)) {
+          await handleLink(text);
+          return;
+        }
+      }
+    }
+    announce('No link text in clipboard.');
+  } catch {
+    announce('Clipboard read failed.');
+  }
+}
+
+async function addSegmentFromForm() {
   if (!state.videoId) return;
   const text = els.commentInput.value.trim();
-  const current = els.video.currentTime || 0;
+  let current = 0;
+  if (!els.embedWrap.hidden && els.playerWrap.classList.contains('link-mode')) {
+    current = await getCurrentTimeFromEmbed();
+  } else {
+    current = els.video.currentTime || 0;
+  }
   const id = Date.now() + Math.floor(Math.random() * 1000);
   const seg = { id, start: current, end: null, text };
   state.segments.push(seg);
@@ -1291,12 +1639,20 @@ function onSegmentsClick(e) {
   const seg = state.segments[idx];
 
   if (action === 'play') {
-    els.video.currentTime = seg.start;
-    els.video.play().catch(() => {});
+    if (!els.playerWrap.classList.contains('link-mode')) {
+      els.video.currentTime = seg.start;
+      els.video.play().catch(() => {});
+    } else {
+      announce('Playback control is unavailable for embedded links.');
+    }
   } else if (action === 'go') {
-    els.video.currentTime = seg.start;
-    els.video.pause();
-    announce(`Moved to ${fmtTime(seg.start)}`);
+    if (!els.playerWrap.classList.contains('link-mode')) {
+      els.video.currentTime = seg.start;
+      els.video.pause();
+      announce(`Moved to ${fmtTime(seg.start)}`);
+    } else {
+      announce('Seeking is unavailable for embedded links.');
+    }
   } else if (action === 'delete') {
     state.segments.splice(idx, 1);
     if (state.editingId === id) state.editingId = null;
@@ -1306,18 +1662,26 @@ function onSegmentsClick(e) {
     state.editingId = null;
     renderSegments();
   } else if (action === 'use-current-start') {
-    const input = article.querySelector('[data-role="edit-start"]');
-    input.value = fmtTime(els.video.currentTime || 0);
+    (async () => {
+      const input = article.querySelector('[data-role="edit-start"]');
+      const isEmbed = els.playerWrap.classList.contains('link-mode');
+      const t = isEmbed ? await getCurrentTimeFromEmbed() : (els.video.currentTime || 0);
+      input.value = fmtTime(t);
+    })();
   } else if (action === 'use-current-end') {
-    const input = article.querySelector('[data-role="edit-end"]');
-    input.value = fmtTime(els.video.currentTime || 0);
+    (async () => {
+      const input = article.querySelector('[data-role="edit-end"]');
+      const isEmbed = els.playerWrap.classList.contains('link-mode');
+      const t = isEmbed ? await getCurrentTimeFromEmbed() : (els.video.currentTime || 0);
+      input.value = fmtTime(t);
+    })();
   } else if (action === 'save-edit') {
     const textInput = article.querySelector('[data-role="edit-text"]');
     const startInput = article.querySelector('[data-role="edit-start"]');
     const endInput = article.querySelector('[data-role="edit-end"]');
     const startVal = parseTime(startInput.value);
     const endVal = parseTime(endInput.value);
-    const dur = Number.isFinite(els.video.duration) ? els.video.duration : Infinity;
+    const dur = (!els.playerWrap.classList.contains('link-mode') && Number.isFinite(els.video.duration)) ? els.video.duration : Infinity;
 
     if (startVal == null) {
       announce('Invalid start time');
@@ -1348,10 +1712,15 @@ function onSegmentsClick(e) {
 }
 
 function updateTimeUi() {
-  els.currentTime.textContent = fmtTime(els.video.currentTime);
-  if (Number.isFinite(els.video.duration)) {
-    els.seekBar.max = els.video.duration;
-    els.seekBar.value = els.video.currentTime;
+  if (!els.playerWrap.classList.contains('link-mode')) {
+    els.currentTime.textContent = fmtTime(els.video.currentTime);
+    if (Number.isFinite(els.video.duration)) {
+      els.seekBar.max = els.video.duration;
+      els.seekBar.value = els.video.currentTime;
+    }
+  } else {
+    els.currentTime.textContent = '00:00';
+    els.duration.textContent = '—';
   }
 }
 
@@ -1362,6 +1731,15 @@ function onLoadedMetadata() {
 
 function highlightActiveSegment() {
   if (!state.segments.length) return;
+  if (els.playerWrap.classList.contains('link-mode')) {
+    els.segments.querySelectorAll('.segment').forEach(el => {
+      const id = Number(el.dataset.id);
+      const isEditing = id === state.editingId;
+      if (isEditing) el.classList.add('active');
+      else el.classList.remove('active');
+    });
+    return;
+  }
   const t = els.video.currentTime;
   let activeId = null;
   for (let i = 0; i < state.segments.length; i++) {
@@ -1383,7 +1761,10 @@ function highlightActiveSegment() {
 function buildMarkdown() {
   const lines = [];
   lines.push('# Video Timestamp Notes');
-  if (state.videoMeta) lines.push(`Video: ${state.videoMeta.name}`);
+  if (state.videoMeta) {
+    lines.push(`Video: ${state.videoMeta.name}`);
+    if (state.videoMeta.url) lines.push(`Link: ${state.videoMeta.url}`);
+  }
   lines.push('');
   const sorted = [...state.segments].sort((a, b) => a.start - b.start);
   for (const s of sorted) {
@@ -1447,6 +1828,7 @@ async function shareMarkdown() {
   }
 }
 
+/* History storage */
 function loadHistoryIndex() {
   try {
     const raw = localStorage.getItem(LS_HISTORY_INDEX);
@@ -1483,6 +1865,7 @@ function clearAllHistory() {
   saveHistoryIndex([]);
 }
 
+/* Sync current state to history */
 function upsertHistoryFromState() {
   const name = state.videoMeta?.name;
   if (!name) return;
@@ -1494,7 +1877,9 @@ function upsertHistoryFromState() {
   const savedAt = new Date().toISOString();
   const size = state.videoMeta?.size || 0;
   const lastModified = state.videoMeta?.lastModified || null;
-  setHistoryItem(name, { name, savedAt, size, lastModified, count: simplified.length, segments: simplified });
+  const url = state.videoMeta?.url || null;
+  const provider = state.videoMeta?.provider || null;
+  setHistoryItem(name, { name, savedAt, size, lastModified, count: simplified.length, segments: simplified, url, provider });
 
   const index = loadHistoryIndex();
   const existing = index.find(x => x.name === name);
@@ -1503,13 +1888,16 @@ function upsertHistoryFromState() {
     existing.count = simplified.length;
     existing.size = size;
     existing.lastModified = lastModified;
+    existing.url = url;
+    existing.provider = provider;
   } else {
-    index.push({ name, savedAt, count: simplified.length, size, lastModified });
+    index.push({ name, savedAt, count: simplified.length, size, lastModified, url, provider });
   }
   index.sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
   saveHistoryIndex(index);
 }
 
+/* History UI */
 function renderHistory() {
   const index = loadHistoryIndex();
   els.historyList.innerHTML = '';
@@ -1551,6 +1939,14 @@ function renderHistory() {
     meta.appendChild(count);
     if (sizeEl.textContent) meta.appendChild(sizeEl);
     if (timeEl.textContent) meta.appendChild(timeEl);
+    if (entry.url) {
+      const host = (() => { try { return new URL(entry.url).hostname.replace(/^www\./, ''); } catch { return ''; } })();
+      if (host) {
+        const hostEl = document.createElement('span');
+        hostEl.textContent = host;
+        meta.appendChild(hostEl);
+      }
+    }
     info.appendChild(meta);
 
     row.appendChild(info);
@@ -1583,6 +1979,7 @@ function buildHistoryMarkdown(item) {
   const lines = [];
   lines.push('# Video Timestamp Notes');
   lines.push(`Video: ${item.name}`);
+  if (item.url) lines.push(`Link: ${item.url}`);
   if (item.size) lines.push(`Size: ${bytesToMB(item.size)}`);
   if (item.lastModified) lines.push(`Last Modified: ${new Date(item.lastModified).toLocaleString()}`);
   lines.push('');
@@ -1621,6 +2018,10 @@ async function copyHistoryItem(name) {
   }
 }
 
+function setSegmentsForVideoId(videoId, segments) {
+  localStorage.setItem(storageKey(videoId), JSON.stringify(segments));
+}
+
 function onHistoryListClick(e) {
   const card = e.target.closest('.history-card');
   if (!card) return;
@@ -1646,9 +2047,10 @@ function onHistoryListClick(e) {
       metaDetail.className = 'history-meta-detail';
       const sizeText = bytesToMB(data?.size);
       const lmText = data?.lastModified ? new Date(data.lastModified).toLocaleString() : '';
+      const linkHtml = data?.url ? `<strong>Link:</strong> <a href="${data.url}" target="_blank" rel="noopener noreferrer">${data.url}</a><br>` : '';
       metaDetail.innerHTML = `
 <strong>File:</strong> ${data?.name || ''}<br>
-${sizeText ? `<strong>Size:</strong> ${sizeText}<br>` : ''}
+${linkHtml}${sizeText ? `<strong>Size:</strong> ${sizeText}<br>` : ''}
 ${lmText ? `<strong>Last Modified:</strong> ${lmText}` : ''}`.trim();
       notesWrap.appendChild(metaDetail);
 
@@ -1669,6 +2071,17 @@ ${lmText ? `<strong>Last Modified:</strong> ${lmText}` : ''}`.trim();
 
       const controls = document.createElement('div');
       controls.className = 'history-controls';
+
+      if (data && data.url) {
+        const editBtn = document.createElement('button');
+        editBtn.className = 'iconbtn sm';
+        editBtn.type = 'button';
+        editBtn.setAttribute('aria-label', 'Edit notes');
+        editBtn.dataset.action = 'edit';
+        editBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M11.97153,9.2l5.26071-5.2607a1.5,1.5,0,0,1,2.12132,0l.7071.70711a1.5,1.5,0,0,1,0,2.12132L14.8,12.02846a2.5,2.5,0,0,1-1.41421.70711l-1.81491.25927a.5.5,0,0,1-.56568-.56568l.25927-1.8149A2.50005,2.50005,0,0,1,11.97153,9.2Z" fill="none" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/><line x1="18.41421" y1="8.41421" x2="15.58579" y2="5.58579" fill="none" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/><path d="M21,11.06238V16a5,5,0,0,1-5,5H8a5,5,0,0,1-5-5V8A5,5,0,0,1,8,3h4.93768" fill="none" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/></svg>';
+        controls.appendChild(editBtn);
+      }
+
       const copyBtn = document.createElement('button');
       copyBtn.className = 'btn tg-primary small';
       copyBtn.type = 'button';
@@ -1686,8 +2099,115 @@ ${lmText ? `<strong>Last Modified:</strong> ${lmText}` : ''}`.trim();
   if (action === 'copy') {
     copyHistoryItem(name);
   }
+
+  if (action === 'edit') {
+    const data = getHistoryItem(name);
+    const notesWrap = card.querySelector('.history-notes');
+    if (!data || !notesWrap) return;
+    notesWrap.innerHTML = '';
+
+    const metaDetail = document.createElement('div');
+    metaDetail.className = 'history-meta-detail';
+    const sizeText = bytesToMB(data?.size);
+    const lmText = data?.lastModified ? new Date(data.lastModified).toLocaleString() : '';
+    const linkHtml = data?.url ? `<strong>Link:</strong> <a href="${data.url}" target="_blank" rel="noopener noreferrer">${data.url}</a><br>` : '';
+    metaDetail.innerHTML = `
+<strong>File:</strong> ${data?.name || ''}<br>
+${linkHtml}${sizeText ? `<strong>Size:</strong> ${sizeText}<br>` : ''}
+${lmText ? `<strong>Last Modified:</strong> ${lmText}` : ''}`.trim();
+    notesWrap.appendChild(metaDetail);
+
+    const list = document.createElement('div');
+    list.className = 'history-notes-list';
+    (data.segments || []).forEach((s, idx) => {
+      const row = document.createElement('div');
+      row.className = 'history-note';
+      const lbl = typeof s.start === 'number'
+        ? (typeof s.end === 'number' && s.end > s.start
+          ? `${fmtTime(s.start)}–${fmtTime(s.end)}`
+          : fmtTime(s.start))
+        : '';
+      const ta = document.createElement('textarea');
+      ta.className = 'seg-text';
+      ta.rows = 2;
+      ta.dataset.idx = String(idx);
+      ta.placeholder = 'Edit note...';
+      ta.value = (s.text || '').trim();
+      row.textContent = '';
+      row.append(lbl ? `${lbl} — ` : '');
+      row.appendChild(ta);
+      list.appendChild(row);
+    });
+    notesWrap.appendChild(list);
+
+    const controls = document.createElement('div');
+    controls.className = 'history-controls';
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'btn tg-primary small';
+    saveBtn.type = 'button';
+    saveBtn.textContent = 'Save';
+    saveBtn.dataset.action = 'save-history-edit';
+    controls.appendChild(saveBtn);
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'btn tg-secondary small';
+    cancelBtn.type = 'button';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.dataset.action = 'cancel-history-edit';
+    controls.appendChild(cancelBtn);
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'btn tg-secondary small';
+    copyBtn.type = 'button';
+    copyBtn.textContent = 'Copy';
+    copyBtn.dataset.action = 'copy';
+    controls.appendChild(copyBtn);
+
+    notesWrap.appendChild(controls);
+  }
+
+  if (action === 'cancel-history-edit') {
+    const row = card.querySelector('.history-row');
+    if (row) row.click();
+    if (row) row.click();
+  }
+
+  if (action === 'save-history-edit') {
+    const data = getHistoryItem(name);
+    if (!data) return;
+    const cardNotes = card.querySelectorAll('.history-note textarea.seg-text');
+    const updated = (data.segments || []).map((s, i) => {
+      const ta = Array.from(cardNotes).find(el => Number(el.dataset.idx) === i);
+      return {
+        start: s.start,
+        end: s.end,
+        text: ta ? ta.value.trim() : (s.text || '').trim()
+      };
+    });
+    data.segments = updated;
+    data.count = updated.length;
+    setHistoryItem(name, data);
+    const idx = loadHistoryIndex();
+    const it = idx.find(x => x.name === name);
+    if (it) it.count = updated.length;
+    saveHistoryIndex(idx);
+
+    if (data.url) {
+      const vid = computeLinkId(data.url);
+      setSegmentsForVideoId(vid, updated);
+      if (state.videoId === vid) {
+        state.segments = updated.map((s, i) => ({ id: Date.now() + i, start: s.start || 0, end: typeof s.end === 'number' ? s.end : null, text: s.text || '' }));
+        renderSegments();
+      }
+    }
+    announce('History updated');
+    const row = card.querySelector('.history-row');
+    if (row) row.click();
+    if (row) row.click();
+  }
 }
 
+/* Reliable UI sync for play/pause with currentColor */
 function updatePlayUi() {
   const playing = !els.video.paused && !els.video.ended;
   els.iconPlay.hidden = playing;
@@ -1748,6 +2268,48 @@ function initDnD() {
   });
 }
 
+function initPasteHandlers() {
+  document.addEventListener('paste', async e => {
+    const dt = e.clipboardData;
+    if (!dt) return;
+    const items = Array.from(dt.items || []);
+    for (const it of items) {
+      if (it.kind === 'file') {
+        const file = it.getAsFile();
+        if (file) {
+          handleFile(file);
+          return;
+        }
+      }
+    }
+    const text = dt.getData('text/plain');
+    if (text && /^https?:\/\//i.test(text.trim())) {
+      await handleLink(text.trim());
+    }
+  });
+}
+
+function initLinkHandlers() {
+  els.addLinkBtn.addEventListener('click', async () => {
+    const v = (els.linkInput.value || '').trim();
+    if (!v) {
+      announce('Enter a link first.');
+      return;
+    }
+    await handleLink(v);
+  });
+  els.linkInput.addEventListener('keydown', async e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const v = (els.linkInput.value || '').trim();
+      if (v) await handleLink(v);
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+      await tryPasteFromClipboard();
+    }
+  });
+}
+
 function restoreLastSession() {
   const vid = localStorage.getItem(`${LS_PREFIX}currentVideoId`);
   const metaRaw = localStorage.getItem(`${LS_PREFIX}currentVideoMeta`);
@@ -1756,9 +2318,13 @@ function restoreLastSession() {
     const meta = JSON.parse(metaRaw);
     state.videoId = vid;
     state.videoMeta = meta;
-    setVideoMeta(meta);
-    state.segments = loadSegments(vid);
-    renderSegments();
+    if (meta && meta.url) {
+      handleLink(meta.url);
+    } else {
+      setVideoMeta(meta);
+      state.segments = loadSegments(vid);
+      renderSegments();
+    }
   } catch {}
 }
 
@@ -1787,6 +2353,10 @@ return resp;
 }
 
 function togglePlay() {
+  if (els.playerWrap.classList.contains('link-mode')) {
+    announce('Playback control is unavailable for embedded links.');
+    return;
+  }
   if (els.video.paused || els.video.ended) {
     els.video.play().catch(() => {});
   } else {
@@ -1802,16 +2372,16 @@ function bindEvents() {
     els.fileInput.value = '';
   });
   els.replaceBtn.addEventListener('click', () => els.fileInput.click());
-  els.commentForm.addEventListener('submit', e => {
+  els.commentForm.addEventListener('submit', async e => {
     e.preventDefault();
     if (!els.commentInput.value.trim()) return;
-    addSegmentFromForm();
+    await addSegmentFromForm();
   });
-  els.commentInput.addEventListener('keydown', e => {
+  els.commentInput.addEventListener('keydown', async e => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       e.preventDefault();
       if (!els.commentInput.value.trim()) return;
-      addSegmentFromForm();
+      await addSegmentFromForm();
     }
   });
   els.segments.addEventListener('click', onSegmentsClick);
@@ -1839,17 +2409,21 @@ function bindEvents() {
   els.ctrlPlay.addEventListener('click', togglePlay);
   els.video.addEventListener('click', togglePlay);
   els.ctrlBack.addEventListener('click', () => {
+    if (els.playerWrap.classList.contains('link-mode')) return;
     els.video.currentTime = Math.max(0, (els.video.currentTime || 0) - 5);
   });
   els.ctrlFwd.addEventListener('click', () => {
+    if (els.playerWrap.classList.contains('link-mode')) return;
     const dur = Number.isFinite(els.video.duration) ? els.video.duration : Infinity;
     els.video.currentTime = Math.min(dur, (els.video.currentTime || 0) + 5);
   });
   els.ctrlMute.addEventListener('click', () => {
+    if (els.playerWrap.classList.contains('link-mode')) return;
     els.video.muted = !els.video.muted;
     els.ctrlMute.classList.toggle('active', els.video.muted);
   });
   els.seekBar.addEventListener('input', () => {
+    if (els.playerWrap.classList.contains('link-mode')) return;
     const v = Number(els.seekBar.value);
     if (Number.isFinite(v)) els.video.currentTime = v;
   });
@@ -1869,6 +2443,9 @@ function bindEvents() {
     announce('History cleared');
   });
   els.historyList.addEventListener('click', onHistoryListClick);
+
+  initPasteHandlers();
+  initLinkHandlers();
 }
 
 function init() {
@@ -1881,23 +2458,6 @@ function init() {
 }
 
 init();
-
-window.addEventListener('DOMContentLoaded', () => {
-  const tg = window.Telegram?.WebApp;
-  if (!tg) return;
-  tg.ready();
-  tg.expand();
-  tg.MainButton.setText('Export to bot');
-  tg.MainButton.show();
-  tg.MainButton.onClick(() => {
-    const text = (window.buildExportText?.() || window.buildMarkdown?.() || 'No data');
-    tg.sendData(JSON.stringify({ action: 'export', content: text }));
-  });
-  tg.BackButton.show();
-  tg.BackButton.onClick(() => tg.close());
-});
-
-window.buildMarkdown = buildMarkdown;
   </script>
 </body>
 </html>
