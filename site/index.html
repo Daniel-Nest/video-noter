@@ -63,7 +63,7 @@ body {
   z-index: 8;
   background: rgba(255,255,255,0.8);
   backdrop-filter: saturate(180%) blur(10px);
-  border-bottom: 1px solid var(--border);
+  border-bottom: none;
   padding: 10px 12px;
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -707,6 +707,15 @@ svg path[d="M0 0h24v24H0Z"] {
   display: flex;
   justify-content: center;
 }
+.history-version {
+  max-width: 900px;
+  margin: 6px auto 12px auto;
+  padding: 0 16px;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+.history-version a { color: var(--muted); text-decoration: underline; }
 
 /* Mobile compact look for collapsed cards */
 @media (max-width: 640px) {
@@ -808,7 +817,7 @@ svg path[d="M0 0h24v24H0Z"] {
 </button>
 </div>
 
-<form id="commentForm" class="comment-form" autocomplete="off" onsubmit="event.preventDefault()" onsubmit="event.preventDefault()" onsubmit="event.preventDefault()" onsubmit="event.preventDefault()">
+<form id="commentForm" class="comment-form" autocomplete="off" onsubmit="event.preventDefault()" onsubmit="event.preventDefault()" onsubmit="event.preventDefault()" onsubmit="event.preventDefault()" onsubmit="event.preventDefault()">
 <label for="commentInput" class="sr-only">Comment</label>
 <div class="field-wrap">
 <textarea id="commentInput" rows="3" placeholder="Add note for current time..." aria-label="Comment input"></textarea>
@@ -923,6 +932,7 @@ svg path[d="M0 0h24v24H0Z"] {
 <span>Clear history</span>
 </button>
 </div>
+<div class="history-version">v5.7.0 • Author: <a href="https://t.me/danielnest_gd" target="_blank" rel="noopener noreferrer">@danielnest_gd</a></div>
 </footer>
 </aside>
 
@@ -970,7 +980,9 @@ const els = {
   historyList: document.getElementById('historyList'),
   historyEmpty: document.getElementById('historyEmpty'),
   linkInput: document.getElementById('linkInput'),
-  addLinkBtn: document.getElementById('addLinkBtn')
+  addLinkBtn: document.getElementById('addLinkBtn'),
+  tgLayout: document.querySelector('.tg-layout'),
+  altImport: document.querySelector('.alt-import')
 };
 
 let state = {
@@ -983,6 +995,11 @@ let state = {
   source: null
 };
 
+/* Telegram WebApp detection */
+function isTelegramWebApp() {
+  return !!(window.Telegram && window.Telegram.WebApp);
+}
+
 /* Embed players controller */
 const embed = {
   type: null,
@@ -992,6 +1009,33 @@ const embed = {
 };
 let ytApiReadyPromise = null;
 let vmApiReadyPromise = null;
+
+/* YT priming for Telegram/WebViews */
+let ytPrimed = false;
+let primeListenerAttached = false;
+function attachPrimeGesture() {
+  if (primeListenerAttached) return;
+  primeListenerAttached = true;
+  const handler = () => {
+    primeYouTubeOnce();
+    document.removeEventListener('pointerdown', handler, { capture: true });
+    document.removeEventListener('touchstart', handler, { capture: true });
+  };
+  document.addEventListener('pointerdown', handler, { capture: true, passive: true });
+  document.addEventListener('touchstart', handler, { capture: true, passive: true });
+}
+async function primeYouTubeOnce() {
+  if (ytPrimed || embed.type !== 'youtube' || !embed.yt || !embed.ready) return;
+  try {
+    if (typeof embed.yt.mute === 'function') embed.yt.mute();
+    if (typeof embed.yt.playVideo === 'function') {
+      embed.yt.playVideo();
+      await sleep(200);
+    }
+    if (typeof embed.yt.pauseVideo === 'function') embed.yt.pauseVideo();
+    ytPrimed = true;
+  } catch {}
+}
 
 /* Embed time ticker/cache to survive webview quirks */
 let embedTimeCache = 0;
@@ -1058,6 +1102,7 @@ function destroyEmbedPlayers() {
   embed.vm = null;
   embed.ready = false;
   embed.type = null;
+  ytPrimed = false;
   stopEmbedTicker();
   const ytEl = document.getElementById('ytContainer');
   if (ytEl && ytEl.parentNode) ytEl.parentNode.removeChild(ytEl);
@@ -1070,7 +1115,7 @@ function ensureYtContainer() {
     el.id = 'ytContainer';
     el.style.position = 'absolute';
     el.style.inset = '0';
-    els.embedWrap.appendChild(el);
+    if (els.embedWrap) els.embedWrap.appendChild(el);
   }
   return el;
 }
@@ -1082,6 +1127,7 @@ function removeEmbedIframe() {
 }
 
 function ensureEmbedIframe() {
+  if (!els.embedWrap) return null;
   if (!els.embedFrame || !document.body.contains(els.embedFrame)) {
     const iframe = document.createElement('iframe');
     iframe.id = 'embedFrame';
@@ -1118,7 +1164,18 @@ async function initYouTubePlayer(videoId) {
     events: {
       onReady: () => {
         embed.ready = true;
+        const ifr = embed.yt && typeof embed.yt.getIframe === 'function' ? embed.yt.getIframe() : container.querySelector('iframe');
+        try {
+          if (ifr) {
+            ifr.removeAttribute('referrerpolicy');
+            const allow = 'autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+            if (!ifr.hasAttribute('allow') || !String(ifr.getAttribute('allow')).includes('autoplay')) {
+              ifr.setAttribute('allow', allow);
+            }
+          }
+        } catch {}
         startEmbedTicker();
+        attachPrimeGesture();
         const tryTitle = () => {
           try {
             const data = embed.yt.getVideoData ? embed.yt.getVideoData() : null;
@@ -1134,12 +1191,16 @@ async function initYouTubePlayer(videoId) {
           }
         };
         tryTitle();
-        const ifr = container.querySelector('iframe');
-        if (ifr && ifr.hasAttribute('referrerpolicy')) {
-          try { ifr.removeAttribute('referrerpolicy'); } catch {}
-        }
       },
-      onStateChange: () => {}
+      onStateChange: () => {
+        try {
+          if (embed.yt && typeof embed.yt.getCurrentTime === 'function') {
+            const t = Number(embed.yt.getCurrentTime() || 0);
+            if (t >= 0) embedTimeCache = t;
+          }
+        } catch {}
+        startEmbedTicker();
+      }
     }
   });
 }
@@ -1147,6 +1208,7 @@ async function initYouTubePlayer(videoId) {
 async function initVimeoPlayer() {
   await ensureVimeoAPI();
   const iframe = ensureEmbedIframe();
+  if (!iframe) return;
   embed.vm = new Vimeo.Player(iframe);
   embed.ready = true;
   embed.type = 'vimeo';
@@ -1167,7 +1229,9 @@ async function getCurrentTimeFromEmbed() {
   try {
     if (embed.type === 'youtube') {
       await ensureYouTubeAPI();
-      for (let i = 0; i < 12; i++) {
+      attachPrimeGesture();
+      await primeYouTubeOnce();
+      for (let i = 0; i < 20; i++) {
         if (embedTimeCache > 0) return embedTimeCache;
         if (embed.yt && typeof embed.yt.getCurrentTime === 'function') {
           let t = 0;
@@ -1186,7 +1250,7 @@ async function getCurrentTimeFromEmbed() {
       return embedTimeCache || 0;
     }
     if (embed.type === 'vimeo' && embed.vm) {
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < 12; i++) {
         if (embedTimeCache > 0) return embedTimeCache;
         try {
           const t = await embed.vm.getCurrentTime();
@@ -1214,6 +1278,14 @@ function fmtHM(isoOrMs) {
   try {
     const d = new Date(isoOrMs);
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '';
+  }
+}
+function fmtDate(isoOrMs) {
+  try {
+    const d = new Date(isoOrMs);
+    return d.toLocaleDateString();
   } catch {
     return '';
   }
@@ -1443,7 +1515,7 @@ function renderSegments() {
       playBtn.type = 'button';
       playBtn.setAttribute('aria-label', 'Play segment');
       playBtn.dataset.action = 'play';
-      playBtn.innerHTML = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g><path d="M19.119,6v12c0,1.105 -0.895,2 -2,2h-10.238c-1.105,0 -2,-0.895 -2,-2v-12c0,-1.105 0.895,-2 2,-2h10.239c1.104,0 1.999,0.895 1.999,2Z"/><path d="M19.119,6h0.881c1.105,0 2,0.895 2,2v8c0,1.105 -0.895,2 -2,2h-0.881"/><path d="M4.881,18h-0.881c-1.105,0 -2,-0.895 -2,-2v-8c0,-1.105 0.895,-2 2,-2h0.881"/><path d="M10.941,9.058l3.882,2.296c0.491,0.29 0.491,1.001 0,1.291l-3.882,2.296c-0.5,0.296 -1.132,-0.065 -1.132,-0.646v-4.591c0,-0.581 0.632,-0.942 1.132,-0.646Z"/></g></svg>';
+      playBtn.innerHTML = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g><path d="M19.119,6v12c0,1.105 -0.895,2 -2,2h-10.238c-1.105,0 -2,-0.895 -2,-2v-12c0,-1.105 0.895,-2 2,-2h10.239c1.104,0 1.999,0.895 1.999,2Z"/><path d="M19.119,6h0.881c1.105,0 2,0.895 2,2v8c0,1.105 -0.895,2 -2,2h-0.881"/><path d="M4.881,18h-0.881c-1.105,0 -2,-0.895 -2,-2v-8c0,-1.105 0.895,-2 2,-2h0.881"/><path d="M10.941,9.058l3.882,2.296c0.491,0.29 0.491,1.001 0,1.291l-3.882,2.296c-0.5,0.296 -1.132,-0.065 -1.132,-0.646v-4.591c-1.77636e-15,-0.581 0.632,-0.942 1.132,-0.646Z"/></g></svg>';
       actions.appendChild(playBtn);
 
       const goBtn = document.createElement('button');
@@ -1470,6 +1542,12 @@ function computeVideoId(file) {
 function computeLinkId(url) {
   return `link__${url}`;
 }
+function isBlobUrl(u) {
+  return typeof u === 'string' && u.startsWith('blob:');
+}
+function pseudoVideoIdFromMeta(name, size, lastModified) {
+  return `${name || ''}__${size || 0}__${lastModified || 0}`;
+}
 
 function resetVideo(clearMeta = true) {
   if (state.objectUrl) {
@@ -1480,9 +1558,9 @@ function resetVideo(clearMeta = true) {
   els.video.removeAttribute('src');
   els.video.load();
   if (els.embedFrame) els.embedFrame.src = '';
-  els.embedWrap.hidden = true;
+  if (els.embedWrap) els.embedWrap.hidden = true;
   els.video.hidden = false;
-  els.playerWrap.classList.remove('link-mode');
+  if (els.playerWrap) els.playerWrap.classList.remove('link-mode');
   els.currentTime.textContent = '00:00';
   els.duration.textContent = '00:00';
   els.seekBar.value = 0;
@@ -1495,6 +1573,7 @@ function resetVideo(clearMeta = true) {
   }
   els.playerWrap.hidden = true;
   els.dropZone.hidden = false;
+  if (els.altImport) els.altImport.hidden = false;
   state.editingId = null;
   updatePlayUi();
 }
@@ -1514,20 +1593,22 @@ function handleFile(file) {
   resetVideo(false);
   state.source = 'file';
   state.videoId = computeVideoId(file);
-  state.videoMeta = { name: file.name || 'video', size: file.size || 0, lastModified: file.lastModified || 0, url: null, provider: null };
+  state.videoMeta = { name: file.name || 'video', size: file.size || 0, lastModified: file.lastModified || 0, url: null, provider: 'file' };
   setVideoMeta(state.videoMeta);
   try {
     state.objectUrl = URL.createObjectURL(file);
+    state.videoMeta.url = state.objectUrl;
   } catch {
     announce('Failed to load the selected file.');
     return;
   }
   els.video.src = state.objectUrl;
   els.video.hidden = false;
-  els.embedWrap.hidden = true;
+  if (els.embedWrap) els.embedWrap.hidden = true;
   els.playerWrap.classList.remove('link-mode');
   els.playerWrap.hidden = false;
   els.dropZone.hidden = true;
+  if (els.altImport) els.altImport.hidden = true;
 
   state.segments = loadSegments(state.videoId);
 
@@ -1553,8 +1634,8 @@ function isDirectVideoUrl(u) {
   try {
     const url = new URL(u);
     const p = url.pathname.toLowerCase();
-    return p.endsWith('.mp4') || p.endsWith('.m4v') || p.endsWith('.webm') || p.endsWith('.mov');
-  } catch { return false; }
+    return p.endsWith('.mp4') || p.endsWith('.m4v') || p.endsWith('.webm') || p.endsWith('.mov') || url.protocol === 'blob:';
+  } catch { return isBlobUrl(u); }
 }
 
 function parseVideoLink(u) {
@@ -1587,6 +1668,7 @@ function parseVideoLink(u) {
     }
     return { type: 'unknown' };
   } catch {
+    if (isBlobUrl(u)) return { type: 'direct', srcUrl: u };
     return { type: 'unknown' };
   }
 }
@@ -1618,7 +1700,7 @@ function renameHistoryIfNeeded(oldName, newName) {
     setHistoryItem(newName, oldItem);
     localStorage.removeItem(historyItemKey(oldName));
     const idx = loadHistoryIndex().filter(x => x.name !== oldName);
-    idx.push({ name: newName, savedAt: oldItem.savedAt, count: (oldItem.segments || []).length, size: oldItem.size || 0, lastModified: oldItem.lastModified || null, url: oldItem.url || null, provider: oldItem.provider || null });
+    idx.push({ name: newName, savedAt: oldItem.savedAt, createdAt: oldItem.createdAt || oldItem.savedAt, count: (oldItem.segments || []).length, size: oldItem.size || 0, lastModified: oldItem.lastModified || null, url: oldItem.url || null, provider: oldItem.provider || null, videoId: oldItem.videoId || null });
     idx.sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
     saveHistoryIndex(idx);
     renderHistory();
@@ -1641,21 +1723,21 @@ async function handleLink(u) {
     setVideoMeta(state.videoMeta);
     els.video.src = u;
     els.video.hidden = false;
-    els.embedWrap.hidden = true;
+    if (els.embedWrap) els.embedWrap.hidden = true;
     els.playerWrap.classList.remove('link-mode');
   } else if (parsed.type === 'youtube' || parsed.type === 'vimeo') {
     state.videoId = computeLinkId(u);
     state.videoMeta = { name: metaName, size: 0, lastModified: Date.now(), url: u, provider: parsed.type };
     setVideoMeta(state.videoMeta);
     destroyEmbedPlayers();
-    els.embedWrap.hidden = false;
+    if (els.embedWrap) els.embedWrap.hidden = false;
     els.video.hidden = true;
     els.playerWrap.classList.add('link-mode');
     if (parsed.type === 'youtube') {
       await initYouTubePlayer(parsed.id);
     } else {
       const iframe = ensureEmbedIframe();
-      iframe.src = parsed.embedUrl;
+      if (iframe) iframe.src = parsed.embedUrl;
       await initVimeoPlayer();
     }
   } else {
@@ -1665,6 +1747,7 @@ async function handleLink(u) {
 
   els.playerWrap.hidden = false;
   els.dropZone.hidden = true;
+  if (els.altImport) els.altImport.hidden = true;
 
   state.segments = loadSegments(state.videoId);
 
@@ -1707,7 +1790,7 @@ async function addSegmentFromForm() {
   if (!state.videoId) return;
   const text = els.commentInput.value.trim();
   let current = 0;
-  if (!els.embedWrap.hidden && els.playerWrap.classList.contains('link-mode')) {
+  if (els.playerWrap.classList.contains('link-mode')) {
     current = await getCurrentTimeFromEmbed();
   } else {
     current = els.video.currentTime || 0;
@@ -1867,19 +1950,31 @@ function highlightActiveSegment() {
   });
 }
 
+function shouldIncludeLinkForCurrent() {
+  if (!state.videoMeta || !state.videoMeta.url) return false;
+  if (state.source !== 'link') return false;
+  if (isBlobUrl(state.videoMeta.url)) return false;
+  return true;
+}
+
 function buildMarkdown() {
   const lines = [];
   lines.push('# Video Timestamp Notes');
   if (state.videoMeta) {
-    lines.push(`Video: ${state.videoMeta.name}`);
-    if (state.videoMeta.url) lines.push(`Link: ${state.videoMeta.url}`);
+    lines.push(`Video: **${state.videoMeta.name}**`);
+    if (shouldIncludeLinkForCurrent()) lines.push(`Link: **${state.videoMeta.url}**`);
   }
   lines.push('');
   const sorted = [...state.segments].sort((a, b) => a.start - b.start);
   for (const s of sorted) {
     const label = timeLabel(s);
-    const note = (s.text ?? '').replace(/\s+/g, ' ').trim();
-    lines.push(`- ${label} — ${note}`);
+    const note = (s.text ?? '').trim();
+    if (label) {
+      lines.push(`- **${label}** — ${note}`);
+    } else {
+      lines.push(`- ${note}`);
+    }
+    lines.push('');
   }
   return lines.join('\n');
 }
@@ -1988,10 +2083,13 @@ function upsertHistoryFromState() {
   const lastModified = state.videoMeta?.lastModified || null;
   const url = state.videoMeta?.url || null;
   const provider = state.videoMeta?.provider || null;
-  setHistoryItem(name, { name, savedAt, size, lastModified, count: simplified.length, segments: simplified, url, provider });
+  const currentIndex = loadHistoryIndex();
+  const existing = currentIndex.find(x => x.name === name);
+  const createdAt = existing?.createdAt || new Date().toISOString();
+  const videoId = state.videoId || existing?.videoId || null;
 
-  const index = loadHistoryIndex();
-  const existing = index.find(x => x.name === name);
+  setHistoryItem(name, { name, savedAt, createdAt, size, lastModified, count: simplified.length, segments: simplified, url, provider, videoId });
+
   if (existing) {
     existing.savedAt = savedAt;
     existing.count = simplified.length;
@@ -1999,11 +2097,13 @@ function upsertHistoryFromState() {
     existing.lastModified = lastModified;
     existing.url = url;
     existing.provider = provider;
+    existing.createdAt = createdAt;
+    existing.videoId = videoId;
   } else {
-    index.push({ name, savedAt, count: simplified.length, size, lastModified, url, provider });
+    currentIndex.push({ name, savedAt, createdAt, count: simplified.length, size, lastModified, url, provider, videoId });
   }
-  index.sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
-  saveHistoryIndex(index);
+  currentIndex.sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
+  saveHistoryIndex(currentIndex);
 }
 
 /* History UI */
@@ -2045,9 +2145,13 @@ function renderHistory() {
     const timeEl = document.createElement('span');
     timeEl.textContent = fmtHM(entry.savedAt);
 
+    const createdEl = document.createElement('span');
+    createdEl.textContent = `Created: ${fmtDate(entry.createdAt || entry.savedAt)}`;
+
     meta.appendChild(count);
     if (sizeEl.textContent) meta.appendChild(sizeEl);
     if (timeEl.textContent) meta.appendChild(timeEl);
+    meta.appendChild(createdEl);
     if (entry.url) {
       const host = (() => { try { return new URL(entry.url).hostname.replace(/^www\./, ''); } catch { return ''; } })();
       if (host) {
@@ -2084,20 +2188,33 @@ function renderHistory() {
   els.historyList.appendChild(frag);
 }
 
+function shouldIncludeLinkForHistory(item) {
+  if (!item || !item.url) return false;
+  if (item.provider === 'file') return false;
+  if (isBlobUrl(item.url)) return false;
+  return true;
+}
+
 function buildHistoryMarkdown(item) {
   const lines = [];
   lines.push('# Video Timestamp Notes');
-  lines.push(`Video: ${item.name}`);
-  if (item.url) lines.push(`Link: ${item.url}`);
+  lines.push(`Video: **${item.name}**`);
+  if (item.url && shouldIncludeLinkForHistory(item)) lines.push(`Link: **${item.url}**`);
   if (item.size) lines.push(`Size: ${bytesToMB(item.size)}`);
   if (item.lastModified) lines.push(`Last Modified: ${new Date(item.lastModified).toLocaleString()}`);
+  if (item.createdAt) lines.push(`Created: ${new Date(item.createdAt).toLocaleString()}`);
   lines.push('');
   const sorted = [...(item.segments || [])].sort((a, b) => (a.start || 0) - (b.start || 0));
   for (const s of sorted) {
     const a = typeof s.start === 'number' ? fmtTime(s.start) : '';
     const label = typeof s.end === 'number' && s.end > s.start ? `${a}–${fmtTime(s.end)}` : a;
-    const note = (s.text ?? '').replace(/\s+/g, ' ').trim();
-    lines.push(label ? `- ${label} — ${note}` : `- ${note}`);
+    const note = (s.text ?? '').trim();
+    if (label) {
+      lines.push(`- **${label}** — ${note}`);
+    } else {
+      lines.push(`- ${note}`);
+    }
+    lines.push('');
   }
   return lines.join('\n');
 }
@@ -2131,6 +2248,10 @@ function setSegmentsForVideoId(videoId, segments) {
   localStorage.setItem(storageKey(videoId), JSON.stringify(segments));
 }
 
+function videoIdFromHistoryItem(data) {
+  return data.videoId || (data.url ? computeLinkId(data.url) : pseudoVideoIdFromMeta(data.name, data.size, data.lastModified));
+}
+
 function onHistoryListClick(e) {
   const card = e.target.closest('.history-card');
   if (!card) return;
@@ -2156,11 +2277,12 @@ function onHistoryListClick(e) {
       metaDetail.className = 'history-meta-detail';
       const sizeText = bytesToMB(data?.size);
       const lmText = data?.lastModified ? new Date(data.lastModified).toLocaleString() : '';
-      const linkHtml = data?.url ? `<strong>Link:</strong> <a href="${data.url}" target="_blank" rel="noopener noreferrer">${data.url}</a><br>` : '';
+      const createdText = data?.createdAt ? new Date(data.createdAt).toLocaleString() : '';
+      const linkHtml = (data?.url && shouldIncludeLinkForHistory(data)) ? `<strong>Link:</strong> <a href="${data.url}" target="_blank" rel="noopener noreferrer">${data.url}</a><br>` : '';
       metaDetail.innerHTML = `
 <strong>File:</strong> ${data?.name || ''}<br>
 ${linkHtml}${sizeText ? `<strong>Size:</strong> ${sizeText}<br>` : ''}
-${lmText ? `<strong>Last Modified:</strong> ${lmText}` : ''}`.trim();
+${lmText ? `<strong>Last Modified:</strong> ${lmText}<br>` : ''}${createdText ? `<strong>Created:</strong> ${createdText}` : ''}`.trim();
       notesWrap.appendChild(metaDetail);
 
       const segs = (data && Array.isArray(data.segments)) ? data.segments : [];
@@ -2181,15 +2303,19 @@ ${lmText ? `<strong>Last Modified:</strong> ${lmText}` : ''}`.trim();
       const controls = document.createElement('div');
       controls.className = 'history-controls';
 
-      if (data && data.url) {
-        const editBtn = document.createElement('button');
-        editBtn.className = 'iconbtn sm';
-        editBtn.type = 'button';
-        editBtn.setAttribute('aria-label', 'Edit notes');
-        editBtn.dataset.action = 'edit';
-        editBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M11.97153,9.2l5.26071-5.2607a1.5,1.5,0,0,1,2.12132,0l.7071.70711a1.5,1.5,0,0,1,0,2.12132L14.8,12.02846a2.5,2.5,0,0,1-1.41421.70711l-1.81491.25927a.5.5,0,0,1-.56568-.56568l.25927-1.8149A2.50005,2.50005,0,0,1,11.97153,9.2Z" fill="none" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/><line x1="18.41421" y1="8.41421" x2="15.58579" y2="5.58579" fill="none" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/><path d="M21,11.06238V16a5,5,0,0,1-5,5H8a5,5,0,0,1-5-5V8A5,5,0,0,1,8,3h4.93768" fill="none" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/></svg>';
-        controls.appendChild(editBtn);
-      }
+      const editBtn = document.createElement('button');
+      editBtn.className = 'btn tg-secondary small';
+      editBtn.type = 'button';
+      editBtn.dataset.action = 'edit';
+      editBtn.textContent = 'Edit notes';
+      controls.appendChild(editBtn);
+
+      const openBtn = document.createElement('button');
+      openBtn.className = 'btn tg-secondary small';
+      openBtn.type = 'button';
+      openBtn.dataset.action = 'open-edit';
+      openBtn.textContent = 'Open & Edit in main';
+      controls.appendChild(openBtn);
 
       const copyBtn = document.createElement('button');
       copyBtn.className = 'btn tg-primary small';
@@ -2209,6 +2335,10 @@ ${lmText ? `<strong>Last Modified:</strong> ${lmText}` : ''}`.trim();
     copyHistoryItem(name);
   }
 
+  if (action === 'open-edit') {
+    openHistoryInMain(name);
+  }
+
   if (action === 'edit') {
     const data = getHistoryItem(name);
     const notesWrap = card.querySelector('.history-notes');
@@ -2219,11 +2349,12 @@ ${lmText ? `<strong>Last Modified:</strong> ${lmText}` : ''}`.trim();
     metaDetail.className = 'history-meta-detail';
     const sizeText = bytesToMB(data?.size);
     const lmText = data?.lastModified ? new Date(data.lastModified).toLocaleString() : '';
-    const linkHtml = data?.url ? `<strong>Link:</strong> <a href="${data.url}" target="_blank" rel="noopener noreferrer">${data.url}</a><br>` : '';
+    const createdText = data?.createdAt ? new Date(data.createdAt).toLocaleString() : '';
+    const linkHtml = (data?.url && shouldIncludeLinkForHistory(data)) ? `<strong>Link:</strong> <a href="${data.url}" target="_blank" rel="noopener noreferrer">${data.url}</a><br>` : '';
     metaDetail.innerHTML = `
 <strong>File:</strong> ${data?.name || ''}<br>
 ${linkHtml}${sizeText ? `<strong>Size:</strong> ${sizeText}<br>` : ''}
-${lmText ? `<strong>Last Modified:</strong> ${lmText}` : ''}`.trim();
+${lmText ? `<strong>Last Modified:</strong> ${lmText}<br>` : ''}${createdText ? `<strong>Created:</strong> ${createdText}` : ''}`.trim();
     notesWrap.appendChild(metaDetail);
 
     const list = document.createElement('div');
@@ -2301,8 +2432,8 @@ ${lmText ? `<strong>Last Modified:</strong> ${lmText}` : ''}`.trim();
     if (it) it.count = updated.length;
     saveHistoryIndex(idx);
 
-    if (data.url) {
-      const vid = computeLinkId(data.url);
+    const vid = videoIdFromHistoryItem(data);
+    if (vid) {
       setSegmentsForVideoId(vid, updated);
       if (state.videoId === vid) {
         state.segments = updated.map((s, i) => ({ id: Date.now() + i, start: s.start || 0, end: typeof s.end === 'number' ? s.end : null, text: s.text || '' }));
@@ -2314,6 +2445,37 @@ ${lmText ? `<strong>Last Modified:</strong> ${lmText}` : ''}`.trim();
     if (row) row.click();
     if (row) row.click();
   }
+}
+
+async function openHistoryInMain(name) {
+  const data = getHistoryItem(name);
+  if (!data) return;
+  if (data.url) {
+    const parsed = parseVideoLink(data.url);
+    if (parsed.type === 'youtube' || parsed.type === 'vimeo' || parsed.type === 'direct') {
+      await handleLink(data.url);
+    } else if (isBlobUrl(data.url)) {
+      await handleLink(data.url);
+    } else {
+      resetVideo(true);
+    }
+  } else {
+    resetVideo(true);
+    state.videoId = videoIdFromHistoryItem(data);
+    state.videoMeta = { name: data.name, size: data.size || 0, lastModified: data.lastModified || null, url: null, provider: data.provider || null };
+    setVideoMeta(state.videoMeta);
+  }
+  if (Array.isArray(data.segments)) {
+    state.segments = data.segments.map((s, i) => ({
+      id: Date.now() + i,
+      start: typeof s.start === 'number' ? s.start : 0,
+      end: typeof s.end === 'number' ? s.end : null,
+      text: (s.text || '').trim()
+    }));
+    renderSegments();
+  }
+  els.historyPanel.hidden = true;
+  announce('Opened in main for editing');
 }
 
 /* Reliable UI sync for play/pause with currentColor */
@@ -2399,6 +2561,7 @@ function initPasteHandlers() {
 }
 
 function initLinkHandlers() {
+  if (!els.addLinkBtn || !els.linkInput) return;
   els.addLinkBtn.addEventListener('click', async () => {
     const v = (els.linkInput.value || '').trim();
     if (!v) {
@@ -2417,6 +2580,12 @@ function initLinkHandlers() {
       await tryPasteFromClipboard();
     }
   });
+}
+
+/* Force main layout gap via inline style */
+function enforceMainLayoutGap32() {
+  if (!els.tgLayout) return;
+  els.tgLayout.style.gap = '32px';
 }
 
 function restoreLastSession() {
@@ -2442,19 +2611,19 @@ function registerServiceWorker() {
   if (!location.protocol.startsWith('http')) return;
   const swCode = `
 self.addEventListener('install', e => {
-self.skipWaiting();
-e.waitUntil(caches.open('s5fdb-cache-v1').then(c => c.addAll(['./'])));
+  self.skipWaiting();
+  e.waitUntil(caches.open('s5fdb-cache-v1').then(c => c.addAll(['./'])));
 });
 self.addEventListener('activate', e => self.clients.claim());
 self.addEventListener('fetch', e => {
-if (e.request.method !== 'GET') return;
-e.respondWith(
-caches.match(e.request).then(r => r || fetch(e.request).then(resp => {
-const copy = resp.clone();
-caches.open('s5fdb-cache-v1').then(c => c.put(e.request, copy));
-return resp;
-}).catch(() => r))
-);
+  if (e.request.method !== 'GET') return;
+  e.respondWith(
+    caches.match(e.request).then(r => r || fetch(e.request).then(resp => {
+      const copy = resp.clone();
+      caches.open('s5fdb-cache-v1').then(c => c.put(e.request, copy));
+      return resp;
+    }).catch(() => r))
+  );
 });`;
   const blob = new Blob([swCode], { type: 'text/javascript' });
   const url = URL.createObjectURL(blob);
@@ -2475,6 +2644,10 @@ function togglePlay() {
 }
 
 function bindEvents() {
+  if (isTelegramWebApp()) {
+    try { window.Telegram.WebApp.ready(); } catch {}
+  }
+
   els.fileInput.addEventListener('change', e => {
     const file = e.target.files && e.target.files[0];
     if (file) handleFile(file);
@@ -2537,27 +2710,43 @@ function bindEvents() {
     if (Number.isFinite(v)) els.video.currentTime = v;
   });
 
-  els.historyBtn.addEventListener('click', () => {
-    renderHistory();
-    els.historyPanel.hidden = false;
-  });
-  els.historyBack.addEventListener('click', () => {
-    els.historyPanel.hidden = true;
-  });
-  els.historyClearAll.addEventListener('click', () => {
-    const ok = confirm('This will delete all saved history (notes only). Continue?');
-    if (!ok) return;
-    clearAllHistory();
-    renderHistory();
-    announce('History cleared');
-  });
-  els.historyList.addEventListener('click', onHistoryListClick);
+  if (els.historyBtn) {
+    els.historyBtn.addEventListener('click', () => {
+      renderHistory();
+      els.historyPanel.hidden = false;
+    });
+  }
+  if (els.historyBack) {
+    els.historyBack.addEventListener('click', () => {
+      els.historyPanel.hidden = true;
+    });
+  }
+  if (els.historyClearAll) {
+    els.historyClearAll.addEventListener('click', () => {
+      const ok = confirm('This will delete all saved history (notes only). Continue?');
+      if (!ok) return;
+      clearAllHistory();
+      renderHistory();
+      announce('History cleared');
+    });
+  }
+  if (els.historyList) {
+    els.historyList.addEventListener('click', onHistoryListClick);
+  }
 
   initPasteHandlers();
   initLinkHandlers();
+
+  if (els.embedWrap) {
+    els.embedWrap.addEventListener('pointerdown', () => {
+      attachPrimeGesture();
+      primeYouTubeOnce();
+    }, { passive: true });
+  }
 }
 
 function init() {
+  enforceMainLayoutGap32();
   initDnD();
   bindEvents();
   restoreLastSession();
